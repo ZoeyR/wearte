@@ -1,0 +1,34 @@
+[package]
+name = "yarte"
+version = "0.0.1"
+authors = ["Rust-iendo Barcelona <riendocontributions@gmail.com>"]
+description = "Type-safe, compiled Handlebars"
+documentation = "https://docs.rs/yarte"
+keywords = ["markup", "template", "handlebars", "html"]
+categories = ["template-engine"]
+homepage = "https://github.com/rust-iendo/yarte"
+repository = "https://github.com/rust-iendo/yarte"
+license = "MIT/Apache-2.0"
+workspace = ".."
+readme = "../README.md"
+edition = "2018"
+
+[badges]
+appveyor = { repository = "botika/yarte" }
+travis-ci = { repository = "rust-iendo/yarte" }
+maintenance = { status = "actively-developed" }
+codecov = { repository = "rust-iendo/yarte", branch = "master", service = "github" }
+
+[features]
+default = []
+with-actix-web = ["actix-web", "yarte_derive/actix-web", "mime_guess"]
+
+[dependencies]
+yarte_derive = { version = "0.0", path = "../yarte_derive" }
+yarte_helpers = { version = "0.0", path = "../yarte_helpers" }
+yarte_config = { version = "0.0", path = "../yarte_config" }
+actix-web = { version = "0.7", optional = true }
+mime_guess = { version = "2.0.0-alpha", optional = true }
+
+[package.metadata.docs.rs]
+features = [ "serde-json" ]

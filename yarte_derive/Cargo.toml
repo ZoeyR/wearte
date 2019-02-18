@@ -1,0 +1,34 @@
+[package]
+name = "yarte_derive"
+version = "0.0.1"
+authors = ["Rust-iendo Barcelona <riendocontributions@gmail.com>"]
+description = "Procedural macro package for handlebars"
+documentation = "https://docs.rs/yarte_derive"
+keywords = ["markup", "template", "handlebars", "html", "yarte_derive"]
+categories = ["template-engine"]
+homepage = "https://github.com/rust-iendo/yarte_derive"
+repository = "https://github.com/rust-iendo/yarte_derive"
+license = "MIT/Apache-2.0"
+workspace = ".."
+readme = "../README.md"
+edition = "2018"
+
+[badges]
+appveyor = { repository = "botika/yarte" }
+travis-ci = { repository = "rust-iendo/yarte" }
+maintenance = { status = "actively-developed" }
+codecov = { repository = "rust-iendo/yarte", branch = "master", service = "github" }
+
+[lib]
+proc-macro = true
+
+[features]
+actix-web = []
+
+[dependencies]
+yarte_config = { version = "0.0", path = "../yarte_config" }
+memchr = "2.1"
+nom = "4.2"
+proc-macro2 = "0.4"
+quote = "0.6"
+syn = { version="0.15", features = ["full", "visit", "extra-traits"]}

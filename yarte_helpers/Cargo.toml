@@ -1,0 +1,23 @@
+[package]
+name = "yarte_helpers"
+version = "0.0.1"
+authors = ["Rust-iendo Barcelona <riendocontributions@gmail.com>"]
+description = "Helper collection for yarte"
+documentation = "https://docs.rs/yarte_helpers"
+keywords = ["markup", "template", "handlebars", "html", "yarte_helpers"]
+categories = ["template-engine"]
+homepage = "https://github.com/rust-iendo/yarte_helpers"
+repository = "https://github.com/rust-iendo/yarte_helpers"
+license = "MIT/Apache-2.0"
+workspace = ".."
+readme = "../README.md"
+edition = "2018"
+
+[badges]
+appveyor = { repository = "botika/yarte" }
+travis-ci = { repository = "rust-iendo/yarte" }
+maintenance = { status = "actively-developed" }
+codecov = { repository = "rust-iendo/yarte", branch = "master", service = "github" }
+
+[dependencies]
+v_htmlescape = "0.4"

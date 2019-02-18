@@ -1,0 +1,12 @@
+{{#each strings }}
+    {{ let a = if false || last {
+                "foo"
+            }
+            else if true && first {
+                "bar"
+            } else {
+                ""
+            }
+    }}
+    {{ index0 }}. {{ key }}{{ 2 * index }}{{{ a }}}
+{{/-each}}

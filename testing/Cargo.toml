@@ -1,0 +1,28 @@
+[package]
+name = "testing"
+version = "0.0.1"
+publish = false
+edition = "2018"
+
+[workspace]
+members = ["."]
+
+[features]
+default = []
+actix = ["actix-web", "bytes", "yarte/with-actix-web"]
+full = ["actix"]
+
+[dependencies]
+actix-web = { version = "0.7", optional = true }
+yarte = { path = "../yarte", version = "*" }
+bytes = { version = "0.4", optional = true }
+
+[build-dependencies]
+yarte = { path = "../yarte", version = "*" }
+
+[dev-dependencies]
+criterion = "0.2"
+
+[[bench]]
+name = "all"
+harness = false

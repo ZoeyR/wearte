@@ -1,0 +1,25 @@
+[package]
+name = "yarte_config"
+version = "0.0.1"
+authors = ["Rust-iendo Barcelona <riendocontributions@gmail.com>"]
+description = "Config file parser of yarte"
+documentation = "https://docs.rs/yarte_config"
+keywords = ["markup", "template", "handlebars", "html", "handlebars_config"]
+categories = ["template-engine"]
+homepage = "https://github.com/rust-iendo/yarte_config"
+repository = "https://github.com/rust-iendo/yarte_config"
+license = "MIT/Apache-2.0"
+workspace = ".."
+readme = "../README.md"
+edition = "2018"
+
+[badges]
+appveyor = { repository = "botika/yarte" }
+travis-ci = { repository = "rust-iendo/yarte" }
+maintenance = { status = "actively-developed" }
+codecov = { repository = "rust-iendo/yarte", branch = "master", service = "github" }
+
+[dependencies]
+serde = "1.0"
+serde_derive = "1.0"
+toml = "0.4"
