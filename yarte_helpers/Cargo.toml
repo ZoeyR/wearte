@@ -20,4 +20,4 @@ maintenance = { status = "actively-developed" }
 codecov = { repository = "rust-iendo/yarte", branch = "master", service = "github" }
 
 [dependencies]
-v_htmlescape = "0.4"
+v_htmlescape = "^0.4.2"
