@@ -55,7 +55,7 @@ macro_rules! impl_as_str_str {
 }
 
 #[rustfmt::skip]
-impl_as_str_str!(str &str &&str &&&str);
+impl_as_str_str!(&str &&str &&&str);
 
 static E: &str = "";
 
@@ -72,15 +72,15 @@ macro_rules! impl_as_str_safe {
 
 #[rustfmt::skip]
 impl_as_str_safe!(
-    bool &bool &&bool &&&bool
-    usize &usize &&usize &&&usize
-    u8 &u8 &&u8 &&&u8
-    u16 &u16 &&u16 &&&u16
-    u32 &u32 &&u32 &&&u32
-    u64 &u64 &&u64 &&&u64
-    isize &isize &&isize &&&isize
-    i8 &i8 &&i8 &&&i8
-    i16 &i16 &&i16 &&&i16
-    i32 &i32 &&i32 &&&i32
-    i64 &i64 &&i64 &&&i64
+    bool &bool &&bool
+    usize &usize &&usize
+    u8 &u8 &&u8
+    u16 &u16 &&u16
+    u32 &u32 &&u32
+    u64 &u64 &&u64
+    isize &isize &&isize
+    i8 &i8 &&i8
+    i16 &i16 &&i16
+    i32 &i32 &&i32
+    i64 &i64 &&i64
 );

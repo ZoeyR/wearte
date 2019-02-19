@@ -75,15 +75,15 @@ macro_rules! impl_from_for {
     )+)
 }
 
-impl_from_for!(Str for str &str &&str &&&str);
-impl_from_for!(Bool for bool &bool &&bool &&&bool);
-impl_from_for!(Usize for usize &usize &&usize &&&usize);
-impl_from_for!(U8 for u8 &u8 &&u8 &&&u8);
-impl_from_for!(U16 for u16 &u16 &&u16 &&&u16);
-impl_from_for!(U32 for u32 &u32 &&u32 &&&u32);
-impl_from_for!(U64 for u64 &u64 &&u64 &&&u64);
-impl_from_for!(Isize for isize &isize &&isize &&&isize);
-impl_from_for!(I8 for i8 &i8 &&i8 &&&i8);
-impl_from_for!(I16 for i16 &i16 &&i16 &&&i16);
-impl_from_for!(I32 for i32 &i32 &&i32 &&&i32);
-impl_from_for!(I64 for i64 &i64 &&i64 &&&i64);
+impl_from_for!(Str for str &str &&str);
+impl_from_for!(Bool for bool &bool &&bool);
+impl_from_for!(Usize for usize &usize &&usize);
+impl_from_for!(U8 for u8 &u8 &&u8);
+impl_from_for!(U16 for u16 &u16 &&u16);
+impl_from_for!(U32 for u32 &u32 &&u32);
+impl_from_for!(U64 for u64 &u64 &&u64);
+impl_from_for!(Isize for isize &isize &&isize);
+impl_from_for!(I8 for i8 &i8 &&i8);
+impl_from_for!(I16 for i16 &i16 &&i16);
+impl_from_for!(I32 for i32 &i32 &&i32);
+impl_from_for!(I64 for i64 &i64 &&i64);
