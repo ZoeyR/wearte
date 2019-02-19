@@ -63,21 +63,15 @@ pub fn teams(b: &mut criterion::Bencher) {
         for (i, team) in (&teams).teams.iter().enumerate() {
             write!(
                 &mut output,
-                "<li class=\"{champion}\">
-                <b>{name}</b>: {score}",
+                "<li class=\"{champion}\">\
+                 <b>{name}</b>: {score}",
                 champion = if i != 0 { "" } else { "champion" },
                 name = team.name,
                 score = team.score
             )
             .unwrap();
         }
-        write!(
-            &mut output,
-            "   </ul>
-            </body>
-            </html>"
-        )
-        .unwrap();
+        write!(&mut output, "</ul></body></html>").unwrap();
     });
 }
 
