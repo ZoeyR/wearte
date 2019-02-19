@@ -21,3 +21,7 @@ codecov = { repository = "rust-iendo/yarte", branch = "master", service = "githu
 
 [dependencies]
 v_htmlescape = "^0.4.2"
+cfg-if = "0.1"
+
+[build-dependencies]
+version_check = "0.1"

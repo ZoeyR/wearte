@@ -1,89 +1,10 @@
-use v_htmlescape::escape;
-
-use std::fmt::{self, Display, Formatter};
-
-pub enum MarkupDisplay<'a> {
-    UnSafe(&'a str),
-    Safe(SafeTypes<'a>),
-}
-
-pub enum SafeTypes<'a> {
-    Usize(&'a usize),
-    U8(&'a u8),
-    U16(&'a u16),
-    U32(&'a u32),
-    U64(&'a u64),
-    Isize(&'a isize),
-    I8(&'a i8),
-    I16(&'a i16),
-    I32(&'a i32),
-    I64(&'a i64),
-    Bool(&'a bool),
-}
-
-impl<'a> Display for MarkupDisplay<'a> {
-    fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        use self::MarkupDisplay::*;
-        match self {
-            UnSafe(s) => escape(s).fmt(f),
-            Safe(s) => match s {
-                SafeTypes::Usize(n) => n.fmt(f),
-                SafeTypes::U8(n) => n.fmt(f),
-                SafeTypes::U16(n) => n.fmt(f),
-                SafeTypes::U32(n) => n.fmt(f),
-                SafeTypes::U64(n) => n.fmt(f),
-                SafeTypes::Isize(n) => n.fmt(f),
-                SafeTypes::I8(n) => n.fmt(f),
-                SafeTypes::I16(n) => n.fmt(f),
-                SafeTypes::I32(n) => n.fmt(f),
-                SafeTypes::I64(n) => n.fmt(f),
-                SafeTypes::Bool(n) => n.fmt(f),
-            },
-        }
+cfg_if! {
+    if #[cfg(yarte_nightly)] {
+        #[path = "markup-night.rs"]
+        mod markup;
+        pub use markup::MarkupDisplay;
+    } else {
+        mod markup;
+        pub use markup::MarkupDisplay;
     }
 }
-macro_rules! impl_from_string {
-    ($($t:ty)+) => ($(
-        impl<'a> From<&'a $t> for MarkupDisplay<'a> {
-            #[inline]
-            fn from(t: &'a $t) -> MarkupDisplay<'a> {
-                MarkupDisplay::UnSafe(t.as_ref())
-            }
-        }
-    )+)
-}
-
-#[rustfmt::skip]
-impl_from_string!(String &String &&String);
-
-macro_rules! impl_from_for {
-    (Str for $($t:ty)+) => ($(
-        impl<'a> From<&'a $t> for MarkupDisplay<'a> {
-            #[inline]
-            fn from(t: &'a $t) -> MarkupDisplay<'a> {
-                MarkupDisplay::UnSafe(t)
-            }
-        }
-    )+);
-    ($p:ident for $($t:ty)+) => ($(
-        impl<'a> From<&'a $t> for MarkupDisplay<'a> {
-            #[inline]
-            fn from(t: &'a $t) -> MarkupDisplay<'a> {
-                MarkupDisplay::Safe(SafeTypes::$p(t))
-            }
-        }
-    )+)
-}
-
-impl_from_for!(Str for str &str &&str &&&str);
-impl_from_for!(Bool for bool &bool &&bool &&&bool);
-impl_from_for!(Usize for usize &usize &&usize &&&usize);
-impl_from_for!(U8 for u8 &u8 &&u8 &&&u8);
-impl_from_for!(U16 for u16 &u16 &&u16 &&&u16);
-impl_from_for!(U32 for u32 &u32 &&u32 &&&u32);
-impl_from_for!(U64 for u64 &u64 &&u64 &&&u64);
-impl_from_for!(Isize for isize &isize &&isize &&&isize);
-impl_from_for!(I8 for i8 &i8 &&i8 &&&i8);
-impl_from_for!(I16 for i16 &i16 &&i16 &&&i16);
-impl_from_for!(I32 for i32 &i32 &&i32 &&&i32);
-impl_from_for!(I64 for i64 &i64 &&i64 &&&i64);
