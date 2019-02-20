@@ -23,6 +23,11 @@ pub trait Template: fmt::Display {
     fn extension() -> Option<&'static str>
     where
         Self: Sized;
+
+    /// Helper function to inspect the template's mime
+    fn mime() -> &'static str
+    where
+        Self: Sized;
 }
 
 pub use yarte_config::{read_config_file, Config};
@@ -32,7 +37,6 @@ pub use yarte_helpers::*;
 #[cfg(feature = "with-actix-web")]
 pub mod actix_web {
     extern crate actix_web;
-    extern crate mime_guess;
 
     // actix_web technically has this as a pub fn in later versions, fs::file_extension_to_mime.
     // Older versions that don't have it exposed are easier this way. If ext is empty or no
@@ -41,14 +45,12 @@ pub mod actix_web {
     pub use self::actix_web::{
         error::ErrorInternalServerError, Error, HttpRequest, HttpResponse, Responder,
     };
-    use self::mime_guess::get_mime_type;
 
-    pub fn respond(t: &super::Template, ext: &str) -> Result<HttpResponse, Error> {
-        let rsp = t
-            .render()
-            .map_err(|_| ErrorInternalServerError("Template parsing error"))?;
-        let ctype: &str = &get_mime_type(ext).to_string();
-        Ok(HttpResponse::Ok().content_type(ctype).body(rsp))
+    #[inline]
+    pub fn respond(t: &dyn super::Template, mime: &'static str) -> Result<HttpResponse, Error> {
+        t.render()
+            .map(|s| HttpResponse::Ok().content_type(mime).body(s))
+            .map_err(|_| ErrorInternalServerError("Template parsing error"))
     }
 }
 

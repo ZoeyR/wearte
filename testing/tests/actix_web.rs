@@ -1,5 +1,4 @@
 #![cfg(feature = "actix")]
-
 extern crate actix_web;
 extern crate bytes;
 

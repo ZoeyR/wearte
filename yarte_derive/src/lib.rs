@@ -1,16 +1,16 @@
+extern crate proc_macro;
+
 #[macro_use]
 extern crate nom;
-extern crate proc_macro;
-extern crate proc_macro2;
 #[macro_use]
 extern crate quote;
-extern crate syn;
 
 mod generator;
 mod input;
 mod parser;
 
 use proc_macro::TokenStream;
+use syn;
 
 use std::{
     collections::BTreeMap,

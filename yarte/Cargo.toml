@@ -21,14 +21,13 @@ codecov = { repository = "rust-iendo/yarte", branch = "master", service = "githu
 
 [features]
 default = []
-with-actix-web = ["actix-web", "yarte_derive/actix-web", "mime_guess"]
+with-actix-web = ["actix-web", "yarte_derive/actix-web"]
 
 [dependencies]
 yarte_derive = { version = "0.0", path = "../yarte_derive" }
 yarte_helpers = { version = "0.0", path = "../yarte_helpers" }
 yarte_config = { version = "0.0", path = "../yarte_config" }
 actix-web = { version = "0.7", optional = true }
-mime_guess = { version = "2.0.0-alpha", optional = true }
 
 [package.metadata.docs.rs]
 features = [ "serde-json" ]

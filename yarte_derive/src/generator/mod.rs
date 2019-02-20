@@ -1,3 +1,4 @@
+use mime_guess::get_mime_type_str;
 use syn::{self, visit::Visit};
 
 use std::{collections::BTreeMap, fmt::Write, mem, path::PathBuf, str};
@@ -86,7 +87,16 @@ impl<'a> Generator<'a> {
         if cfg!(feature = "actix-web") {
             self.impl_actix_web_responder(&mut buf);
         }
+
         buf.buf
+    }
+    // Get mime type
+    fn get_mime(&mut self) -> &str {
+        let ext = match self.input.path.extension() {
+            Some(s) => s.to_str().unwrap(),
+            None => "txt",
+        };
+        get_mime_type_str(ext).expect("valid mime ext")
     }
 
     // Implement `Display` for the given context struct
@@ -97,6 +107,10 @@ impl<'a> Generator<'a> {
             "{:?}",
             self.input.path.extension().map(|s| s.to_str().unwrap())
         ));
+        buf.writeln("}");
+
+        buf.writeln("fn mime() -> &'static str {");
+        buf.writeln(&format!("{:?}", self.get_mime()));
         buf.writeln("}");
         buf.writeln("}");
     }
@@ -123,11 +137,10 @@ impl<'a> Generator<'a> {
              -> ::std::result::Result<Self::Item, Self::Error> {",
         );
 
-        let ext = match self.input.path.extension() {
-            Some(s) => s.to_str().unwrap(),
-            None => "txt",
-        };
-        buf.writeln(&format!("::yarte::actix_web::respond(&self, {:?})", ext));
+        buf.writeln(&format!(
+            "::yarte::actix_web::respond(&self, {:?})",
+            self.get_mime()
+        ));
 
         buf.writeln("}");
         buf.writeln("}");
