@@ -163,11 +163,11 @@ let author = Author {
 {{\-each}}
 ```
 
-#### \[WIP] Unless helper
+#### Unless helper
 ```handlebars
-{{#unless isAdministrator}} 
+{{#unless isAdministrator-}} 
   Ask administrator.
-{{\unless}}
+{{\-unless}}
 ```
     
 #### \[WIP] Log helper
