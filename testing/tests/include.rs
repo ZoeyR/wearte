@@ -28,3 +28,19 @@ fn test_include_dir() {
         "\n  INCLUDED-DIR: foo1\n  INCLUDED-DIR: bar2"
     )
 }
+
+#[derive(Template)]
+#[template(path = "deep/include.html")]
+struct IncludeDirDTemplate<'a> {
+    strs: &'a [&'a str],
+}
+
+#[test]
+fn test_include_dir_d() {
+    let strs = vec!["foo", "bar"];
+    let s = IncludeDirDTemplate { strs: &strs };
+    assert_eq!(
+        s.render().unwrap(),
+        "\n  INCLUDED-DIR: foo1\n  INCLUDED-DIR: bar2"
+    )
+}
