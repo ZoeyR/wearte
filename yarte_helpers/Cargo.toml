@@ -14,10 +14,8 @@ readme = "../README.md"
 edition = "2018"
 
 [badges]
-appveyor = { repository = "botika/yarte" }
 travis-ci = { repository = "rust-iendo/yarte" }
 maintenance = { status = "actively-developed" }
-codecov = { repository = "rust-iendo/yarte", branch = "master", service = "github" }
 
 [dependencies]
 v_htmlescape = "^0.4.2"

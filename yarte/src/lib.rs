@@ -38,10 +38,6 @@ pub use yarte_helpers::*;
 pub mod actix_web {
     extern crate actix_web;
 
-    // actix_web technically has this as a pub fn in later versions, fs::file_extension_to_mime.
-    // Older versions that don't have it exposed are easier this way. If ext is empty or no
-    // associated type was found, then this returns `application/octet-stream`, in line with how
-    // actix_web handles it in newer releases.
     pub use self::actix_web::{
         error::ErrorInternalServerError, Error, HttpRequest, HttpResponse, Responder,
     };
