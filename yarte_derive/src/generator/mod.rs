@@ -1,5 +1,4 @@
-use syn::visit::Visit;
-use syn::{self, parse_str};
+use syn::{self, visit::Visit};
 
 use std::{collections::BTreeMap, fmt::Write, mem, path::PathBuf, str};
 
@@ -266,7 +265,7 @@ impl<'a> Generator<'a> {
         let id = self.scp.len();
         let ctx = if loop_var {
             let ctx = vec![format!("_key_{}", id), format!("_index_{}", id)];
-            if self.buf_is_range() {
+            if let syn::Expr::Range(..) = args {
                 buf.writeln(&format!(
                     "for ({}, {}) in ({}).enumerate() {{",
                     ctx[1],
@@ -284,7 +283,7 @@ impl<'a> Generator<'a> {
             ctx
         } else {
             let ctx = vec![format!("_key_{}", id)];
-            if self.buf_is_range() {
+            if let syn::Expr::Range(..) = args {
                 buf.writeln(&format!(
                     "for {} in {} {{",
                     ctx[0],
@@ -476,16 +475,6 @@ impl<'a> Generator<'a> {
         if !buf_lit.is_empty() {
             buf.writeln(&format!("_fmt.write_str({:#?})?;", buf_lit));
         }
-    }
-
-    fn buf_is_range(&mut self) -> bool {
-        if let Ok(expr) = parse_str::<syn::Expr>(&self.buf_t) {
-            return match expr {
-                syn::Expr::Range(..) => true,
-                _ => false,
-            };
-        }
-        false
     }
 
     /* Helper methods for dealing with whitespace nodes */
