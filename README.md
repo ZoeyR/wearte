@@ -24,6 +24,8 @@ yarte = "0.0"
 In order to use a struct in the template  you will have to call the procedural macro `Template`. For example, in the following code we are going to use struct `VariablesTemplate`, to then define `s` as a `VariablesTemplate` with content.
 
 ```rust
+use yarte::Template;
+
 #[derive(Template)]
 #[template(path = "hello.html")]
 struct VariablesTemplate<'a> {
