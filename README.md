@@ -1,6 +1,18 @@
 # \[WIP] Yarte [![Documentation](https://docs.rs/yarte/badge.svg)](https://docs.rs/yarte/) [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build status](https://api.travis-ci.org/rust-iendo/yarte.svg?branch=master)](https://travis-ci.org/rust-iendo/yarte) [![Windows build](https://ci.appveyor.com/api/projects/status/github/rust-iendo/yarte?svg=true)](https://ci.appveyor.com/project/botika/v-htmlescape) [![Downloads](https://img.shields.io/crates/d/yarte.svg)](https://crates.io/crates/yarte)
 Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine, is the fastest template engine. Uses a Handlebars-like syntaxis, well known and intuitive. Yarte is an optimized, and easy-to-use rust crate, with which developers can create logic around their HTML templates using using conditionals, loops, rust code, and predefined functions and using templates within templates.
 
+## Why a derive template engine?
+There are many templates engines based on mustache or/and handlebars,
+I have not known any that derives the compilation of templates to the compiler (like [askama](https://github.com/djc/askama)).
+By deriving this task from another process, we can optimize the instructions 
+generated with our own tools or those of third parties such as LLVM. 
+This is impossible in other cases creating a bottleneck in our web servers 
+that reaches milliseconds. Because of this, `yarte` puts the template in priority 
+by allocating its needs statically. Thus, we write faster than the macro `write!`, 
+easy parallelism and with simd in its default html escape. 
+
+In conclusion a derive is used to be the fastest and simplest.
+
 ## Getting started
 Add Yarte dependency to your Cargo.toml file:
 
@@ -20,9 +32,9 @@ struct VariablesTemplate<'a> {
 }
 
 let template = VariablesTemplate {
-        title: "My Title",
-        body: "My Body",
-    };
+    title: "My Title",
+    body: "My Body",
+};
 ```
     
 Now that our struct is defined lets use it in a HTML template. Yarte templates look like regular HTML, with embedded yarte expressions.
@@ -85,11 +97,11 @@ assert_eq!("Hello, world!", t.render().unwrap()); // then render it.
 ## HTML
 Yarte HTML-escapes values returned by a {{expression}}. If you don't want Yarte to escape a value, use the "triple-stash", {{{. For example having the following struct:
 
-```json
-{
+```rust
+let t = CardTemplate {
   title: "All about <p> Tags",
   body: "<p>This is a post about &lt;p&gt; tags</p>"
-}
+};
 ```
 and the following template:
 
@@ -143,8 +155,12 @@ let author = Author {
 #### Each helper
 ```handlebars
 {{#each into_iter}} 
-    {{ key }} {{ last }} {{ index }}
-{{\each}}
+    {{#- if first || last -}}
+        {{ index }} 
+    {{- else -}}
+        {{ index0 }} 
+    {{/-if }} {{ key }} 
+{{\-each}}
 ```
 
 #### \[WIP] Unless helper
@@ -182,12 +198,13 @@ Yarte provides you with the possibility to use raw rust code within the HTML fil
 ```handlebars
 {{ let user = getUser() }}
 
-{{# if let Ok(user) = user -}}
+{{# if let Ok(user) = user }}
     Hello, {{ user }}
 {{- else }}
     How are you?
 {{\-if}}
 ```
+
 
 ## Support
 
