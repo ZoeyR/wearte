@@ -1,12 +1,15 @@
 use syn;
 use syn::visit::Visit;
 
+use std::{mem, path::PathBuf};
+
 use super::Context;
-use crate::append_extension;
-use crate::input::TemplateInput;
-use crate::parser::{Helper, Node};
-use std::mem;
-use std::path::PathBuf;
+
+use crate::{
+    append_extension,
+    input::TemplateInput,
+    parser::{Helper, Node},
+};
 
 pub(super) fn find_loop_var(
     input: &TemplateInput,

@@ -1,6 +1,5 @@
-use syn;
-use syn::parse_str;
 use syn::visit::Visit;
+use syn::{self, parse_str};
 
 use std::{collections::BTreeMap, fmt::Write, mem, path::PathBuf, str};
 
