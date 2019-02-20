@@ -1,6 +1,6 @@
 [package]
 name = "yarte_helpers"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Rust-iendo Barcelona <riendocontributions@gmail.com>"]
 description = "Helper collection for yarte"
 documentation = "https://docs.rs/yarte_helpers"
