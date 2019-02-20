@@ -14,3 +14,25 @@ fn test_hello() {
     let hello = HelloTemplate { name: "world" }; // instantiate your struct
     assert_eq!("Hello, world!", hello.render().unwrap()); // then render it.
 }
+
+#[derive(Template)] // this will generate the code...
+#[template(source = "{{}", ext = "txt")] // using the template in this path, relative
+                                         // to the templates dir in the crate root
+struct BracketsTemplate;
+
+#[test]
+fn test_brackets() {
+    let hello = BracketsTemplate; // instantiate your struct
+    assert_eq!("{{}", hello.render().unwrap()); // then render it.
+}
+
+#[derive(Template)] // this will generate the code...
+#[template(source = "{{{}}", ext = "txt")] // using the template in this path, relative
+                                           // to the templates dir in the crate root
+struct Brackets2Template;
+
+#[test]
+fn test_brackets2() {
+    let hello = Brackets2Template; // instantiate your struct
+    assert_eq!("{{{}}", hello.render().unwrap()); // then render it.
+}

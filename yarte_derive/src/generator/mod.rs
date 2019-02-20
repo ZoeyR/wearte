@@ -454,11 +454,7 @@ impl<'a> Generator<'a> {
 
         for s in mem::replace(&mut self.buf_w, vec![]) {
             match s {
-                Writable::Lit(s) => {
-                    buf_lit
-                        .write_str(&s.replace("{", "{{").replace("}", "}}"))
-                        .unwrap();
-                }
+                Writable::Lit(s) => buf_lit.write_str(s).unwrap(),
                 Writable::Expr(s, wrapped) => {
                     use super::input::EscapeMode::*;
                     if !buf_lit.is_empty() {

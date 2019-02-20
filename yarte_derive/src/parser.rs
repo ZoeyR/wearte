@@ -382,7 +382,7 @@ macro_rules! make_expr {
                     }
                 }
 
-                at += j + 2;
+                at += j + 1;
             } else {
                 return Err(nom::Err::Error(error_position!($i, ERR_ARGS)));
             }
