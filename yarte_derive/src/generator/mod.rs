@@ -338,7 +338,7 @@ impl<'a> Generator<'a> {
 
             self.scp.push(vec![]);
             self.visit_expr(cond);
-            // TODO: fix remove detect close at init
+            // TODO: dedent if begin with whitespace follow be "{"
             buf.dedent();
             buf.writeln(&format!(
                 "}} else if {} {{",
@@ -353,6 +353,7 @@ impl<'a> Generator<'a> {
             self.handle_ws(ws);
             self.write_buf_writable(buf);
 
+            // TODO: dedent if begin with whitespace follow be "{"
             buf.dedent();
             buf.writeln("} else {");
 
