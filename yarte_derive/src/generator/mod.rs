@@ -300,8 +300,8 @@ impl<'a> Generator<'a> {
             }
             ctx
         };
+        self.on.push(On::Each(id));
         self.scp.push(ctx);
-        self.on.push(On::Each(self.scp.len() - 1));
 
         self.handle(nodes, buf);
         self.handle_ws(&ws.1);
