@@ -233,7 +233,9 @@ impl<'a> Visit<'a> for Generator<'a> {
         visit_attrs!(self, attrs);
 
         self.buf_t.push('(');
+        self.will_wrap = false;
         visit_punctuated!(self, elems, visit_expr);
+        self.will_wrap = true;
         self.buf_t.push(')');
     }
 

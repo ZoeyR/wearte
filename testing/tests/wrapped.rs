@@ -76,6 +76,16 @@ fn test_array() {
 }
 
 #[derive(Template)]
+#[template(source = "{{ (\"&\", 1, 1.0, true).0 }}", ext = "html")]
+struct TupleTemplate;
+
+#[test]
+fn test_tuple() {
+    let t = TupleTemplate; // instantiate your struct
+    assert_eq!("&amp;", t.render().unwrap()); // then render it.
+}
+
+#[derive(Template)]
 #[template(
     source = "{{ cond }}{{ 1 + num }}{{ num }}{{ cond || true }}{{ 1.0 }}{{ [true][0..1][0] }}",
     ext = "html",
