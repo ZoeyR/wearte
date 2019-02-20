@@ -1,6 +1,6 @@
 [package]
 name = "yarte_config"
-version = "0.0.1"
+version = "0.0.2"
 authors = ["Rust-iendo Barcelona <riendocontributions@gmail.com>"]
 description = "Config file parser of yarte"
 documentation = "https://docs.rs/yarte_config"
