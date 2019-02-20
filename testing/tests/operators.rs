@@ -37,3 +37,17 @@ fn test_precedence() {
     let t = PrecedenceTemplate {};
     assert_eq!(t.render().unwrap(), "6".repeat(7));
 }
+
+#[derive(Template)]
+#[template(path = "unless-operators.html")]
+struct UnlessOperatorsTemplate {
+    a: usize,
+    b: usize,
+    c: usize,
+}
+
+#[test]
+fn test_unless_operators() {
+    let t = UnlessOperatorsTemplate { a: 1, b: 1, c: 2 };
+    assert_eq!(t.render().unwrap(), "");
+}

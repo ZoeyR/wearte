@@ -107,7 +107,7 @@ fn find_partials(
                         find_partials(input, map, b, path, check);
                     }
                 }
-                Helper::Each(_, _, b) | Helper::With(_, _, b) => {
+                Helper::Each(_, _, b) | Helper::With(_, _, b) | Helper::Unless(_, _, b) => {
                     find_partials(input, map, b, path, check)
                 }
                 _ => unimplemented!(),

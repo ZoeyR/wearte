@@ -238,9 +238,46 @@ impl<'a> Generator<'a> {
             Each(ws, e, b) => self.visit_each(buf, ws, e, b),
             If(ifs, elsif, els) => self.visit_if(buf, ifs, elsif, els),
             With(ws, e, b) => self.visit_with(buf, ws, e, b),
+            Unless(ws, e, b) => self.visit_unless(buf, ws, e, b),
             Defined(..) => unimplemented!(),
-            Unless(..) => unimplemented!(),
         }
+    }
+
+    fn visit_unless(
+        &mut self,
+        buf: &mut Buffer,
+        ws: &'a (Ws, Ws),
+        args: &'a syn::Expr,
+        nodes: &'a [Node<'a>],
+    ) {
+        self.handle_ws(&ws.0);
+        self.write_buf_writable(buf);
+
+        use syn::Expr::*;
+        match args {
+            Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..)
+            | Paren(..) | Macro(..) | Lit(..) => (),
+            Unary(syn::ExprUnary { op, .. }) => {
+                if let syn::UnOp::Not(..) = op {
+                    panic!("Unary negate operator in unless helper, use if helper instead")
+                }
+            }
+            _ => panic!("unless helper not accept some arguments"),
+        }
+
+        self.visit_expr(args);
+        buf.writeln(&format!(
+            "if !({}) {{",
+            mem::replace(&mut self.buf_t, String::new())
+        ));
+
+        self.scp.push(vec![]);
+        self.handle(nodes, buf);
+        self.scp.pop();
+
+        self.handle_ws(&ws.1);
+        self.write_buf_writable(buf);
+        buf.writeln("}");
     }
 
     fn visit_with(
