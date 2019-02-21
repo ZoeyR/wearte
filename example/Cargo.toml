@@ -1,0 +1,23 @@
+[package]
+name = "example"
+version = "0.0.1"
+authors = ["Rust-iendo Barcelona <riendocontributions@gmail.com>"]
+publish = false
+
+edition = "2018"
+[workspace]
+members = ["."]
+
+[dependencies]
+env_logger = "0.5"
+
+yarte = { version = "0.0", features=["with-actix-web"]  }
+
+actix = "0.7"
+actix-web = "0.7"
+
+[build-dependencies]
+yarte = { version = "0.0", features=["with-actix-web"]  }
+
+[dev-dependencies]
+bytes = "0.4"
