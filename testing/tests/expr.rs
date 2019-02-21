@@ -297,7 +297,7 @@ fn test_let_else_if_each_some() {
     source = "Hello, {{#each conditions}}
     {{#-if let Some(check) = cond }}
         {{#-if check }}
-            {{ let cond = if check { \"foo\" } else { \"\"} }}
+            {{ let cond = if check { \"&foo\" } else { \"&\"} }}
             {{
                 if check {
                     cond
@@ -328,7 +328,7 @@ fn test_let_else_if_each_some() {
         None
     {{/-if
 }}{{/each}}!",
-    ext = "txt"
+    ext = "html",
 )]
 struct ElseIfEachSomeTemplate {
     conditions: Vec<Cond>,
@@ -346,7 +346,7 @@ fn test_else_if_each_some() {
 
     let t = ElseIfEachSomeTemplate { conditions }; // instantiate your struct
     assert_eq!(
-        "Hello, footruefootruefootruefootruefootrue!",
+        "Hello, &amp;footrue&amp;footrue&amp;footrue&amp;footrue&amp;footrue!",
         t.render().unwrap()
     ); // then render it.
 
