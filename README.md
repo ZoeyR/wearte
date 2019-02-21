@@ -207,6 +207,15 @@ Yarte provides you with the possibility to use raw rust code within the HTML fil
 {{\-if}}
 ```
 
+## Roadmap
+-[ ] Minimize html5 at literal
+-[ ] Derive builders for generate defined helpers and filters
+-[ ] `>|` filters on fmt::Formatter
+-[ ] Concatenate filters, unix like, on fmt::Formatter (when is possible)
+-[ ] ... you can open a issue!
+
+We are not looking for anything other than render HTML5 and text as fast as possible. 
+You can open a pull request in another case.
 
 ## Support
 
