@@ -18,6 +18,3 @@ actix-web = "0.7"
 
 [build-dependencies]
 yarte = { version = "0.0", features=["with-actix-web"]  }
-
-[dev-dependencies]
-bytes = "0.4"
