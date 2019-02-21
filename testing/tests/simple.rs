@@ -218,18 +218,6 @@ fn test_empty() {
     assert_eq!(Empty.render().unwrap(), "foo");
 }
 
-mod without_import_on_derive {
-    #[derive(yarte::Template)]
-    #[template(source = "foo", ext = "txt")]
-    struct WithoutImport;
-
-    #[test]
-    fn test_without_import() {
-        use yarte::Template;
-        assert_eq!(WithoutImport.render().unwrap(), "foo");
-    }
-}
-
 struct Foo {
     a: usize,
 }

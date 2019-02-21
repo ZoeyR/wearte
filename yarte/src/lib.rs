@@ -11,7 +11,7 @@ pub use yarte_helpers::{helpers, helpers::MarkupDisplay, Error, Result};
 pub trait Template: fmt::Display {
     /// Helper method which allocates a new `String` and renders into it
     fn render(&self) -> Result<String> {
-        let mut buf = String::new();
+        let mut buf = String::with_capacity(Self::size_hint());
         self.render_into(&mut buf)?;
         Ok(buf)
     }
@@ -28,6 +28,8 @@ pub trait Template: fmt::Display {
     fn mime() -> &'static str
     where
         Self: Sized;
+
+    fn size_hint() -> usize;
 }
 
 pub use yarte_config::{read_config_file, Config};
@@ -36,18 +38,9 @@ pub use yarte_helpers::*;
 
 #[cfg(feature = "with-actix-web")]
 pub mod actix_web {
-    extern crate actix_web;
-
-    pub use self::actix_web::{
+    pub use actix_web::{
         error::ErrorInternalServerError, Error, HttpRequest, HttpResponse, Responder,
     };
-
-    #[inline]
-    pub fn respond(t: &dyn super::Template, mime: &'static str) -> Result<HttpResponse, Error> {
-        t.render()
-            .map(|s| HttpResponse::Ok().content_type(mime).body(s))
-            .map_err(|_| ErrorInternalServerError("Template parsing error"))
-    }
 }
 
 fn visit_dirs(dir: &Path, cb: &Fn(&DirEntry)) -> io::Result<()> {

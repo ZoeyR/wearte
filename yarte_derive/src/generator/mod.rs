@@ -57,6 +57,7 @@ pub(self) struct Generator<'a> {
     skip_ws: bool,
     ctx: Context<'a>,
     on_path: PathBuf,
+    size_hint: usize,
 }
 
 impl<'a> Generator<'a> {
@@ -73,6 +74,7 @@ impl<'a> Generator<'a> {
             skip_ws: false,
             will_wrap: true,
             wrapped: true,
+            size_hint: 0,
         }
     }
 
@@ -80,9 +82,9 @@ impl<'a> Generator<'a> {
     fn build(&mut self) -> String {
         let mut buf = Buffer::new(0);
 
-        self.impl_template(&mut buf);
         let nodes: &[Node] = self.ctx.get(&self.on_path).unwrap();
         self.impl_display(nodes, &mut buf);
+        self.impl_template(&mut buf);
 
         if cfg!(feature = "actix-web") {
             self.impl_actix_web_responder(&mut buf);
@@ -112,6 +114,9 @@ impl<'a> Generator<'a> {
         buf.writeln("fn mime() -> &'static str {");
         buf.writeln(&format!("{:?}", self.get_mime()));
         buf.writeln("}");
+        buf.writeln("fn size_hint() -> usize {");
+        buf.writeln(&format!("{}", self.size_hint));
+        buf.writeln("}");
         buf.writeln("}");
     }
 
@@ -120,7 +125,9 @@ impl<'a> Generator<'a> {
         self.write_header(buf, "::std::fmt::Display", None);
         buf.writeln("fn fmt(&self, _fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {");
 
+        let last = buf.buf.len();
         self.handle(nodes, buf);
+        self.size_hint = buf.buf.len() - last;
         buf.writeln("Ok(())");
 
         buf.writeln("}");
@@ -138,7 +145,9 @@ impl<'a> Generator<'a> {
         );
 
         buf.writeln(&format!(
-            "::yarte::actix_web::respond(&self, {:?})",
+            "self.render()
+                .map(|s| Self::Item::Ok().content_type({:?}).body(s))
+                .map_err(|_| ::yarte::actix_web::ErrorInternalServerError(\"Template parsing error\"))",
             self.get_mime()
         ));
 
