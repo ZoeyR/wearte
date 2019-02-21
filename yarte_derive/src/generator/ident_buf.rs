@@ -1,5 +1,6 @@
+use crate::parser::ws;
+
 // https://github.com/djc/askama/blob/master/askama_derive/src/generator.rs#L1189-L1232
-// TODO: dedent if begin with whitespace follow be "{"
 pub(super) struct Buffer {
     // The buffer to generate the code into
     pub(super) buf: String,
@@ -18,17 +19,29 @@ impl Buffer {
         }
     }
 
-    pub(super) fn writeln(&mut self, s: &str) {
-        if s == "}" {
-            self.dedent();
+    pub(super) fn writeln(&mut self, mut s: &str) {
+        for (i, b) in s.as_bytes().iter().enumerate() {
+            if !ws(*b) {
+                if *b == b'}' {
+                    s = s.get(i..).unwrap()
+                }
+                break;
+            }
         }
+
         if !s.is_empty() {
+            if s.as_bytes()[0] == b'}' {
+                self.dedent();
+            }
+
             self.write(s);
+
+            if *s.as_bytes().last().unwrap() == b'{' {
+                self.indent();
+            }
         }
+
         self.buf.push('\n');
-        if s.ends_with('{') {
-            self.indent();
-        }
         self.start = true;
     }
 
@@ -42,11 +55,11 @@ impl Buffer {
         self.buf.push_str(s);
     }
 
-    pub(super) fn indent(&mut self) {
+    fn indent(&mut self) {
         self.indent += 1;
     }
 
-    pub(super) fn dedent(&mut self) {
+    fn dedent(&mut self) {
         if self.indent == 0 {
             panic!("dedent() called while indentation == 0");
         }

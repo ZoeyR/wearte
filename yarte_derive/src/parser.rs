@@ -438,7 +438,7 @@ fn is_path(n: u8) -> bool {
 }
 
 #[inline]
-fn ws(n: u8) -> bool {
+pub(crate) fn ws(n: u8) -> bool {
     n.is_ascii_whitespace()
 }
 

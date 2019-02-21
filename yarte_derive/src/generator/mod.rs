@@ -386,8 +386,6 @@ impl<'a> Generator<'a> {
 
             self.scp.push(vec![]);
             self.visit_expr(cond);
-            // TODO: dedent if begin with whitespace follow be "{"
-            buf.dedent();
             buf.writeln(&format!(
                 "}} else if {} {{",
                 mem::replace(&mut self.buf_t, String::new())
@@ -401,8 +399,6 @@ impl<'a> Generator<'a> {
             self.handle_ws(ws);
             self.write_buf_writable(buf);
 
-            // TODO: dedent if begin with whitespace follow be "{"
-            buf.dedent();
             buf.writeln("} else {");
 
             self.scp.push(vec![]);
