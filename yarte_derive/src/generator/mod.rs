@@ -256,7 +256,7 @@ impl<'a> Generator<'a> {
         use syn::Expr::*;
         match args {
             Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..)
-            | Paren(..) | Macro(..) | Lit(..) => (),
+            | Paren(..) | Macro(..) | Lit(..) | Try(..) => (),
             Unary(syn::ExprUnary { op, .. }) => {
                 if let syn::UnOp::Not(..) = op {
                     panic!("Unary negate operator in unless helper, use if helper instead")

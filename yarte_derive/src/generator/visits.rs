@@ -229,6 +229,12 @@ impl<'a> Visit<'a> for Generator<'a> {
         visit::visit_expr_reference(self, i);
     }
 
+    fn visit_expr_try(&mut self, syn::ExprTry { attrs, expr, .. }: &'a syn::ExprTry) {
+        visit_attrs!(self, attrs);
+        self.visit_expr(expr);
+        self.buf_t.push('?');
+    }
+
     fn visit_expr_tuple(&mut self, syn::ExprTuple { attrs, elems, .. }: &'a syn::ExprTuple) {
         visit_attrs!(self, attrs);
 

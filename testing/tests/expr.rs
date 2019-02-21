@@ -1,4 +1,5 @@
-use yarte::Template;
+use std::fmt::Error;
+use yarte::{Result, Template};
 
 #[derive(Template)]
 #[template(source = "Hello, {{ name }}!", ext = "txt")]
@@ -328,7 +329,7 @@ fn test_let_else_if_each_some() {
         None
     {{/-if
 }}{{/each}}!",
-    ext = "html",
+    ext = "html"
 )]
 struct ElseIfEachSomeTemplate {
     conditions: Vec<Cond>,
@@ -405,4 +406,44 @@ struct LetCollectTemplate {
 fn test_let_collect() {
     let t = LetCollectTemplate { a: vec![0, 1] }; // instantiate your struct
     assert_eq!("13", t.render().unwrap()); // then render it.
+}
+
+#[derive(Template)]
+#[template(source = "{{ a? }}", ext = "html")]
+struct TryTemplate {
+    a: yarte::Result<usize>,
+}
+
+#[test]
+fn test_try() {
+    let t = TryTemplate { a: Err(Error) }; // instantiate your struct
+    assert!(t.render().is_err()); // then render it.
+
+    let t = TryTemplate { a: Ok(1) }; // instantiate your struct
+    assert_eq!("1", t.render().unwrap()); // then render it.
+}
+
+#[derive(Template)]
+#[template(source = "{{#unless self.not_is(some)? }}foo{{/unless}}", ext = "txt")]
+struct TryMethodTemplate {
+    some: bool,
+}
+
+impl TryMethodTemplate {
+    fn not_is(&self, some: bool) -> Result<bool> {
+        if some {
+            Ok(false)
+        } else {
+            Err(Error)
+        }
+    }
+}
+
+#[test]
+fn test_try_method() {
+    let t = TryMethodTemplate { some: false }; // instantiate your struct
+    assert!(t.render().is_err()); // then render it.
+
+    let t = TryMethodTemplate { some: true }; // instantiate your struct
+    assert_eq!("foo", t.render().unwrap()); // then render it.
 }
