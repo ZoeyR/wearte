@@ -21,7 +21,7 @@ use std::{
 use yarte_config::{read_config_file, Config};
 
 use crate::input::{Print, Source, TemplateInput};
-use crate::parser::{parse, parse_partials, Helper, Node};
+use crate::parser::{parse, parse_partials, Node};
 
 #[proc_macro_derive(Template, attributes(template))]
 pub fn derive_template(input: TokenStream) -> TokenStream {
@@ -93,22 +93,7 @@ fn find_partials(
                 let source = get_template_source(&extends);
                 check.push((extends, source));
             }
-            Node::Helper(h) => match h {
-                Helper::If((_, _, ref ifs), elsif, els) => {
-                    find_partials(input, ifs, path, check);
-                    for (_, _, b) in elsif {
-                        find_partials(input, b, path, check);
-                    }
-                    if let Some((_, b)) = els {
-                        find_partials(input, b, path, check);
-                    }
-                }
-                Helper::Each(_, _, b) | Helper::With(_, _, b) | Helper::Unless(_, _, b) => {
-                    find_partials(input, b, path, check)
-                }
-                _ => unimplemented!(),
-            },
-            _ => (),
+            _ => unreachable!(),
         }
     }
 }
