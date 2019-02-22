@@ -34,13 +34,18 @@ fn build_template(ast: &syn::DeriveInput) -> String {
     let config = Config::new(&config_toml);
 
     let input = TemplateInput::new(ast, &config);
-    let source: &str = &match input.source {
+    let source = match input.source {
         Source::Source(ref s) => s.clone(),
         Source::Path(_) => get_template_source(&input.path),
     };
 
     let mut sources = BTreeMap::new();
-    find_used_templates(&input, &mut sources, source);
+
+    let mut check = vec![(input.path.clone(), source)];
+    while let Some((path, src)) = check.pop() {
+        find_partials(&input, &parse(&src), &path, &mut check);
+        sources.insert(path, src);
+    }
 
     let mut parsed = BTreeMap::new();
     for (p, s) in &sources {
@@ -59,14 +64,6 @@ fn build_template(ast: &syn::DeriveInput) -> String {
     code
 }
 
-fn find_used_templates(input: &TemplateInput, map: &mut BTreeMap<PathBuf, String>, source: &str) {
-    let mut check = vec![(input.path.clone(), source.to_string())];
-    while let Some((path, src)) = check.pop() {
-        find_partials(input, map, &parse(&src), &path, &mut check);
-        map.insert(path, src);
-    }
-}
-
 fn append_extension(input: &TemplateInput, path: &str) -> PathBuf {
     let p = PathBuf::from(path);
     if p.extension().is_some() {
@@ -82,7 +79,6 @@ fn append_extension(input: &TemplateInput, path: &str) -> PathBuf {
 
 fn find_partials(
     input: &TemplateInput,
-    map: &mut BTreeMap<PathBuf, String>,
     nodes: &[Node],
     path: &PathBuf,
     check: &mut Vec<(PathBuf, String)>,
@@ -99,16 +95,16 @@ fn find_partials(
             }
             Node::Helper(h) => match h {
                 Helper::If((_, _, ref ifs), elsif, els) => {
-                    find_partials(input, map, ifs, path, check);
+                    find_partials(input, ifs, path, check);
                     for (_, _, b) in elsif {
-                        find_partials(input, map, b, path, check);
+                        find_partials(input, b, path, check);
                     }
                     if let Some((_, b)) = els {
-                        find_partials(input, map, b, path, check);
+                        find_partials(input, b, path, check);
                     }
                 }
                 Helper::Each(_, _, b) | Helper::With(_, _, b) | Helper::Unless(_, _, b) => {
-                    find_partials(input, map, b, path, check)
+                    find_partials(input, b, path, check)
                 }
                 _ => unimplemented!(),
             },
