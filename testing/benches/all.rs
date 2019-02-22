@@ -5,6 +5,7 @@ extern crate criterion;
 use criterion::Criterion;
 use yarte::Template;
 
+mod fmt;
 mod std_write;
 
 criterion_main!(benches);
@@ -12,9 +13,11 @@ criterion_group!(benches, functions);
 
 fn functions(c: &mut Criterion) {
     c.bench_function("Teams", teams);
+    c.bench_function("Write Teams", std_write::teams);
+    c.bench_function("Formatter Teams", fmt::teams);
     c.bench_function("Big table", |b| big_table(b, &100));
-    c.bench_function("Std Teams", std_write::teams);
-    c.bench_function("Std Big table", |b| std_write::big_table(b, &100));
+    c.bench_function("Write Big table", |b| std_write::big_table(b, &100));
+    c.bench_function("Formatter Big table", |b| fmt::big_table(b, &100));
 }
 
 fn big_table(b: &mut criterion::Bencher, size: &usize) {
