@@ -48,10 +48,20 @@ impl<'a> FindEach<'a> {
                         // TODO: super deep
                         // TODO: super or only when loop
                         self.visit_expr(first);
+                        if self.loop_var {
+                            break;
+                        }
                         self.find(block);
                         for (_, e, b) in else_if {
+                            if self.loop_var {
+                                break;
+                            }
+
                             self.visit_expr(e);
                             self.find(b);
+                        }
+                        if self.loop_var {
+                            break;
                         }
                         if let Some((_, els)) = els {
                             self.find(els);
@@ -87,8 +97,8 @@ impl<'a> FindEach<'a> {
 
 impl<'a> Visit<'a> for FindEach<'a> {
     fn visit_expr_path(&mut self, i: &'a syn::ExprPath) {
-        if i.path.segments.len() == 1 {
-            if !self.loop_var {
+        if !self.loop_var {
+            if i.path.segments.len() == 1 {
                 let ident: &str = &i.path.segments[0].ident.to_string();
                 match ident {
                     "index" | "index0" | "first" | "last" => self.loop_var = true,
