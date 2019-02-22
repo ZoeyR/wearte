@@ -215,6 +215,7 @@ Yarte provides you with the possibility to use raw rust code within the HTML fil
 We are not looking for anything other than render HTML5 and text as fast as possible. 
 You can open a pull request in another case.
 
+##### They are the more fastest, [benchmarks at nightly](https://github.com/rust-iendo/template-benchmarks-rs#rust-template-engine-benchmarks-in-nightly-)
 ## Support
 
 [Patreon](https://www.patreon.com/r_iendo)
