@@ -4,6 +4,10 @@ use syn::{parse_str, Expr, Stmt};
 
 use std::str::{self, from_utf8};
 
+mod pre_partials;
+
+pub(crate) use self::pre_partials::parse_partials;
+
 pub(crate) type Ws = (bool, bool);
 
 #[derive(Debug, PartialEq)]
@@ -480,6 +484,8 @@ mod tests {
         assert_eq!(parse(src), vec![Node::Lit("", "{{#", "")]);
         let src = r#"{{>"#;
         assert_eq!(parse(src), vec![Node::Lit("", "{{>", "")]);
+        let src = r#"{"#;
+        assert_eq!(parse(src), vec![Node::Lit("", "{", "")]);
     }
 
     #[test]

@@ -21,7 +21,7 @@ use std::{
 use yarte_config::{read_config_file, Config};
 
 use crate::input::{Print, Source, TemplateInput};
-use crate::parser::{parse, Helper, Node};
+use crate::parser::{parse, parse_partials, Helper, Node};
 
 #[proc_macro_derive(Template, attributes(template))]
 pub fn derive_template(input: TokenStream) -> TokenStream {
@@ -43,7 +43,7 @@ fn build_template(ast: &syn::DeriveInput) -> String {
 
     let mut check = vec![(input.path.clone(), source)];
     while let Some((path, src)) = check.pop() {
-        find_partials(&input, &parse(&src), &path, &mut check);
+        find_partials(&input, &parse_partials(&src), &path, &mut check);
         sources.insert(path, src);
     }
 
