@@ -195,7 +195,7 @@ Partials can be used to generate faster code using a pre defined functions.
 {{> path/to/file }}
 ```
 ## Rust code
-Yarte provides you with the possibility to use raw rust code within the HTML files. This is limited, but most of esential syntax is soppurted.
+Yarte provides you with the possibility to use raw rust code within the HTML files. This is limited, but most of essential syntax is supported.
     
 ```handlebars
 {{#with getUser(id)?-}}
