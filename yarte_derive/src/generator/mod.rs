@@ -144,12 +144,11 @@ impl<'a> Generator<'a> {
              -> ::std::result::Result<Self::Item, Self::Error> {",
         );
 
-        buf.writeln(&format!(
+        buf.writeln(
             "self.render()
-                .map(|s| Self::Item::Ok().content_type({:?}).body(s))
-                .map_err(|_| ::yarte::actix_web::ErrorInternalServerError(\"Template parsing error\"))",
-            self.get_mime()
-        ));
+                .map(|s| Self::Item::Ok().content_type(Self::mime()).body(s))
+                .map_err(|_| ::yarte::actix_web::ErrorInternalServerError(\"Template parsing error\"))"
+        );
 
         buf.writeln("}");
         buf.writeln("}");
