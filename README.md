@@ -54,7 +54,7 @@ Let's say file `hello.html` looks like this:
 
 When rendered, 
 ```rust
-template.to_string();
+template.render().unwrap();
 ```
 
 the following html characters will be created, as expected:
@@ -198,13 +198,11 @@ Partials can be used to generate faster code using a pre defined functions.
 Yarte provides you with the possibility to use raw rust code within the HTML files. This is limited, but most of esential syntax is soppurted.
     
 ```handlebars
-{{ let user = getUser() }}
+{{ let user = getUser(id)? }}
 
-{{# if let Ok(user) = user }}
-    Hello, {{ user }}
-{{- else }}
-    How are you?
-{{\-if}}
+{{#with user -}}
+    Hello, {{#if isAdmin || isDev }}Mr. {{\if}}{{ user }}
+{{/-with}}
 ```
 
 ## Roadmap
