@@ -1,6 +1,6 @@
 [package]
 name = "yarte"
-version = "0.0.2"
+version = "0.0.3"
 authors = ["Rust-iendo Barcelona <riendocontributions@gmail.com>"]
 description = "Type-safe, compiled Handlebars"
 documentation = "https://docs.rs/yarte"
