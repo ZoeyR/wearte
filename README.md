@@ -198,11 +198,73 @@ Partials can be used to generate faster code using a pre defined functions.
 Yarte provides you with the possibility to use raw rust code within the HTML files. This is limited, but most of esential syntax is soppurted.
     
 ```handlebars
-{{ let user = getUser(id)? }}
-
-{{#with user -}}
+{{#with getUser(id)?-}}
     Hello, {{#if isAdmin || isDev }}Mr. {{\if}}{{ user }}
 {{/-with}}
+```
+
+```handlebars
+Hello, {{#each conditions}}
+    {{#-if let Some(check) = cond }}
+        {{#-if check }}
+            {{ let cond = if check { "&foo" } else { "&"} }}
+            {{
+                if check {
+                    cond
+                } else if let Some(cond) = key.cond {
+                    if cond {
+                        "1"
+                    } else {
+                        "2"
+                    }
+                } else {
+                   "for"
+                }
+            }}
+        {{- else if let Some(_) = cond }}
+        {{- else if let Some(cond) = key.check }}
+            {{#-if cond -}}
+                baa
+            {{/-if }}
+        {{- else -}}
+            {{ cond.is_some() }}
+        {{/-if-}}
+        {{ cond.is_some() && true }}
+    {{-else if let Some(cond) = check }}
+        {{#-if cond -}}
+            bar
+        {{/-if}}
+    {{- else -}}
+        None
+    {{/-if
+}}{{/each}}!
+```
+
+```handlebars
+{{ let mut a = name.chars() }}
+
+{{  
+    let b: String = loop {
+        if a.next().is_none() && true {
+            let mut a = name.repeat(1);
+            a.push('!');
+            break a.repeat(2);
+        } else {
+            continue;
+        }
+    }
+}}
+
+{{ b }}
+```
+
+```handlebars
+{{ let doubled = a.iter().map(|x| x * 2).collect::<Vec<_>>() }}
+{{ let doubled: Vec<usize> = a.iter().map(|x| x * 2).collect() }}
+
+{{#each doubled -}}
+    {{ key + 1 }}
+{{/-each}}
 ```
 
 ## Roadmap
