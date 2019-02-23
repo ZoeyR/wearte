@@ -109,10 +109,7 @@ impl StructBuilder {
 // TODO: extend
 impl<'a> Visit<'a> for StructBuilder {
     fn visit_attribute(&mut self, i: &'a syn::Attribute) {
-        match i.parse_meta() {
-            Ok(m) => self.visit_meta(&m),
-            Err(_) => (),
-        }
+        self.visit_meta(&i.parse_meta().expect("valid meta attributes"));
     }
 
     fn visit_meta_list(&mut self, syn::MetaList { ident, nested, .. }: &'a syn::MetaList) {
@@ -123,6 +120,7 @@ impl<'a> Visit<'a> for StructBuilder {
                 self.visit_nested_meta(it)
             }
         } else {
+            // TODO: possible not panic
             panic!("not valid template attribute: {}", ident);
         }
     }
