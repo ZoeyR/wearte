@@ -84,11 +84,13 @@ impl StructBuilder {
 
         let escaping = self.escaping.map_or_else(
             || {
-                if HTML_EXTENSIONS.contains(&path.extension().map_or("", |s| s.to_str().unwrap())) {
-                    EscapeMode::Html
-                } else {
-                    EscapeMode::None
+                if let Some(e) = path.extension() {
+                    if HTML_EXTENSIONS.contains(&e.to_str().unwrap()) {
+                        return EscapeMode::Html;
+                    }
                 }
+
+                EscapeMode::None
             },
             |s| s.into(),
         );
