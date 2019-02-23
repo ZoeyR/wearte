@@ -10,7 +10,7 @@ struct IncludeTemplate<'a> {
 fn test_include() {
     let strs = vec!["foo", "bar"];
     let s = IncludeTemplate { strs: &strs };
-    assert_eq!(s.render().unwrap(), "\n  INCLUDED: foo1\n  INCLUDED: bar2")
+    assert_eq!(s.call().unwrap(), "\n  INCLUDED: foo1\n  INCLUDED: bar2")
 }
 
 #[derive(Template)]
@@ -24,7 +24,7 @@ fn test_include_dir() {
     let strs = vec!["foo", "bar"];
     let s = IncludeDirTemplate { strs: &strs };
     assert_eq!(
-        s.render().unwrap(),
+        s.call().unwrap(),
         "\n  INCLUDED-DIR: foo1\n  INCLUDED-DIR: bar2"
     )
 }
@@ -40,7 +40,7 @@ fn test_include_dir_d() {
     let strs = vec!["foo", "bar"];
     let s = IncludeDirDTemplate { strs: &strs };
     assert_eq!(
-        s.render().unwrap(),
+        s.call().unwrap(),
         "\n  INCLUDED-DIR: foo1\n  INCLUDED-DIR: bar2"
     )
 }

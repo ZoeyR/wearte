@@ -6,12 +6,12 @@ pub use yarte_helpers::{helpers::MarkupDisplay, Error, Result};
 
 // TODO: document
 pub trait Template: fmt::Display {
-    fn render(&self) -> Result<String> {
+    fn call(&self) -> Result<String> {
         let mut buf = String::with_capacity(Self::size_hint());
-        self.render_into(&mut buf)?;
+        self.call_into(&mut buf)?;
         Ok(buf)
     }
-    fn render_into(&self, writer: &mut fmt::Write) -> fmt::Result {
+    fn call_into(&self, writer: &mut fmt::Write) -> fmt::Result {
         write!(writer, "{}", self)
     }
 

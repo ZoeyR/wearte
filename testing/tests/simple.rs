@@ -18,7 +18,7 @@ fn test_variables() {
         i18n: "Iñtërnâtiônàlizætiøn".to_string(),
     };
     assert_eq!(
-        s.render().unwrap(),
+        s.call().unwrap(),
         "hello world, foo\n\
          with number: 42\n\
          Iñtërnâtiônàlizætiøn is important\n\
@@ -37,10 +37,7 @@ struct EscapeTemplate<'a> {
 fn test_escape() {
     let s = EscapeTemplate { name: "<>&\"'/" };
 
-    assert_eq!(
-        s.render().unwrap(),
-        "Hello, &lt;&gt;&amp;&quot;&#x27;&#x2f;!"
-    );
+    assert_eq!(s.call().unwrap(), "Hello, &lt;&gt;&amp;&quot;&#x27;&#x2f;!");
 }
 
 #[derive(Template)]
@@ -59,7 +56,7 @@ fn test_variables_no_escape() {
         i18n: "Iñtërnâtiônàlizætiøn".to_string(),
     };
     assert_eq!(
-        s.render().unwrap(),
+        s.call().unwrap(),
         "hello world, foo\n\
          with number: 42\n\
          Iñtërnâtiônàlizætiøn is important\n\
@@ -76,7 +73,7 @@ struct IfTemplate {
 #[test]
 fn test_if() {
     let s = IfTemplate { cond: true };
-    assert_eq!(s.render().unwrap(), "true");
+    assert_eq!(s.call().unwrap(), "true");
 }
 
 #[derive(Template)]
@@ -88,13 +85,13 @@ struct ElseTemplate {
 #[test]
 fn test_else_false() {
     let s = ElseTemplate { cond: false };
-    assert_eq!(s.render().unwrap(), "     \n    false\n");
+    assert_eq!(s.call().unwrap(), "     \n    false\n");
 }
 
 #[test]
 fn test_else_true() {
     let s = ElseTemplate { cond: true };
-    assert_eq!(s.render().unwrap(), "     \n true");
+    assert_eq!(s.call().unwrap(), "     \n true");
 }
 
 #[derive(Template)]
@@ -110,7 +107,7 @@ fn test_else_if() {
         cond: false,
         check: true,
     };
-    assert_eq!(s.render().unwrap(), " checked ");
+    assert_eq!(s.call().unwrap(), " checked ");
 }
 
 #[derive(Template)]
@@ -120,7 +117,7 @@ struct CommentTemplate {}
 #[test]
 fn test_comment() {
     let t = CommentTemplate {};
-    assert_eq!(t.render().unwrap(), "");
+    assert_eq!(t.call().unwrap(), "");
 }
 
 #[derive(Template)]
@@ -132,7 +129,7 @@ struct NegationTemplate {
 #[test]
 fn test_negation() {
     let t = NegationTemplate { foo: false };
-    assert_eq!(t.render().unwrap(), "Hello");
+    assert_eq!(t.call().unwrap(), "Hello");
 }
 
 #[derive(Template)]
@@ -144,7 +141,7 @@ struct MinusTemplate {
 #[test]
 fn test_minus() {
     let t = MinusTemplate { foo: 1 };
-    assert_eq!(t.render().unwrap(), "Hello");
+    assert_eq!(t.call().unwrap(), "Hello");
 }
 
 #[derive(Template)]
@@ -158,7 +155,7 @@ fn test_index() {
     let mut foo = HashMap::new();
     foo.insert("bar".into(), "baz".into());
     let t = IndexTemplate { foo };
-    assert_eq!(t.render().unwrap(), "baz");
+    assert_eq!(t.call().unwrap(), "baz");
 }
 
 #[derive(Template)]
@@ -172,7 +169,7 @@ fn test_tuple_attr() {
     let t = TupleAttrTemplate {
         tuple: ("foo", "bar"),
     };
-    assert_eq!(t.render().unwrap(), "foobar");
+    assert_eq!(t.call().unwrap(), "foobar");
 }
 
 struct Holder {
@@ -196,7 +193,7 @@ fn test_nested_attr() {
             holder: Holder { a: 5 },
         },
     };
-    assert_eq!(t.render().unwrap(), "5");
+    assert_eq!(t.call().unwrap(), "5");
 }
 
 #[derive(Template)]
@@ -206,7 +203,7 @@ struct LiteralsTemplate {}
 #[test]
 fn test_literals() {
     let s = LiteralsTemplate {};
-    assert_eq!(s.render().unwrap(), "a");
+    assert_eq!(s.call().unwrap(), "a");
 }
 
 #[derive(Template)]
@@ -215,7 +212,7 @@ struct Empty;
 
 #[test]
 fn test_empty() {
-    assert_eq!(Empty.render().unwrap(), "foo");
+    assert_eq!(Empty.call().unwrap(), "foo");
 }
 
 struct Foo {
@@ -233,7 +230,7 @@ fn test_attr() {
     let t = AttrTemplate {
         inner: Foo { a: 1 },
     };
-    assert_eq!(t.render().unwrap(), "1");
+    assert_eq!(t.call().unwrap(), "1");
 }
 
 #[derive(Template)]
@@ -245,5 +242,5 @@ struct OptionTemplate {
 #[test]
 fn test_option() {
     let t = OptionTemplate { var: Some(1) };
-    assert_eq!(t.render().unwrap(), "some: 1");
+    assert_eq!(t.call().unwrap(), "some: 1");
 }

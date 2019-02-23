@@ -13,5 +13,5 @@ struct RustMacrosTemplate {}
 #[test]
 fn main() {
     let template = RustMacrosTemplate {};
-    assert_eq!("Hello, world!", template.render().unwrap());
+    assert_eq!("Hello, world!", template.call().unwrap());
 }

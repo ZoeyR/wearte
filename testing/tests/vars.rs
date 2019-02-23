@@ -9,7 +9,7 @@ struct LetTemplate<'a> {
 #[test]
 fn test_let() {
     let t = LetTemplate { s: "foo" };
-    assert_eq!(t.render().unwrap(), "foo");
+    assert_eq!(t.call().unwrap(), "foo");
 }
 
 #[derive(Template)]
@@ -25,5 +25,5 @@ fn test_let_tuple() {
         s: "foo",
         t: ("bar", "bazz"),
     };
-    assert_eq!(t.render().unwrap(), "foo\nbarbazz");
+    assert_eq!(t.call().unwrap(), "foo\nbarbazz");
 }

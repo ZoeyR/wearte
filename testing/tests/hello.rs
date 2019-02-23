@@ -12,7 +12,7 @@ struct HelloTemplate<'a> {
 #[test]
 fn test_hello() {
     let hello = HelloTemplate { name: "world" }; // instantiate your struct
-    assert_eq!("Hello, world!", hello.render().unwrap()); // then render it.
+    assert_eq!("Hello, world!", hello.call().unwrap()); // then call it.
 }
 
 #[derive(Template)] // this will generate the code...
@@ -23,7 +23,7 @@ struct BracketsTemplate;
 #[test]
 fn test_brackets() {
     let hello = BracketsTemplate; // instantiate your struct
-    assert_eq!("{{}", hello.render().unwrap()); // then render it.
+    assert_eq!("{{}", hello.call().unwrap()); // then call it.
 }
 
 #[derive(Template)] // this will generate the code...
@@ -34,5 +34,5 @@ struct Brackets2Template;
 #[test]
 fn test_brackets2() {
     let hello = Brackets2Template; // instantiate your struct
-    assert_eq!("{{{}}", hello.render().unwrap()); // then render it.
+    assert_eq!("{{{}}", hello.call().unwrap()); // then call it.
 }

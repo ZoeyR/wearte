@@ -10,7 +10,7 @@ struct HelloTemplate<'a> {
 #[test]
 fn test_hello() {
     let t = HelloTemplate { name: "world" }; // instantiate your struct
-    assert_eq!("Hello, world!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, world!", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -22,7 +22,7 @@ struct HelloTxtTemplate<'a> {
 #[test]
 fn test_hello_txt() {
     let t = HelloTxtTemplate { name: "world" }; // instantiate your struct
-    assert_eq!("Hello, world!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, world!", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -41,7 +41,7 @@ struct IgnoreTemplate {
 #[test]
 fn test_ignore() {
     let t = IgnoreTemplate { cond: Some(false) }; // instantiate your struct
-    assert_eq!("foo", t.render().unwrap()); // then render it.
+    assert_eq!("foo", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -56,7 +56,7 @@ struct ClosureTemplate<'a> {
 #[test]
 fn test_closure() {
     let t = ClosureTemplate { name: "world" }; // instantiate your struct
-    assert_eq!("true", t.render().unwrap()); // then render it.
+    assert_eq!("true", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -71,7 +71,7 @@ struct LetClosureTemplate<'a> {
 #[test]
 fn test_let_closure() {
     let t = LetClosureTemplate { name: "world" }; // instantiate your struct
-    assert_eq!("worldworld", t.render().unwrap()); // then render it.
+    assert_eq!("worldworld", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -83,7 +83,7 @@ struct LetClosureScopeTemplate<'a> {
 #[test]
 fn test_let_closure_scope() {
     let t = LetClosureScopeTemplate { name: "world" }; // instantiate your struct
-    assert_eq!("world", t.render().unwrap()); // then render it.
+    assert_eq!("world", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -95,7 +95,7 @@ struct LetTemplate<'a> {
 #[test]
 fn test_let() {
     let t = LetTemplate { name: "world" }; // instantiate your struct
-    assert_eq!("Hello, world!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, world!", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -126,7 +126,7 @@ fn test_with_fields() {
             },
         ),
     }; // instantiate your struct
-    assert_eq!("Hello, foo bar and fOO bAR!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, foo bar and fOO bAR!", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -141,7 +141,7 @@ struct LetWithTemplate<'a> {
 #[test]
 fn test_let_with() {
     let t = LetWithTemplate { name: "world" }; // instantiate your struct
-    assert_eq!("Hello, worldworld!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, worldworld!", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -165,7 +165,7 @@ struct LetIfTemplate {
 #[test]
 fn test_let_if() {
     let t = LetIfTemplate { cond: true }; // instantiate your struct
-    assert_eq!("Hello, true false foo!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, true false foo!", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -190,7 +190,7 @@ struct LetIfSomeTemplate {
 #[test]
 fn test_let_if_some() {
     let t = LetIfSomeTemplate { cond: Some(false) }; // instantiate your struct
-    assert_eq!("Hello, bar!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, bar!", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -226,27 +226,27 @@ fn test_let_else_if_some() {
         cond: Some(false),
         check: Some(false),
     }; // instantiate your struct
-    assert_eq!("Hello, bar!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, bar!", t.call().unwrap()); // then call it.
     let t = LetElseIfSomeTemplate {
         cond: Some(true),
         check: Some(false),
     }; // instantiate your struct
-    assert_eq!("Hello, foo!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, foo!", t.call().unwrap()); // then call it.
     let t = LetElseIfSomeTemplate {
         cond: None,
         check: Some(true),
     }; // instantiate your struct
-    assert_eq!("Hello, baa!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, baa!", t.call().unwrap()); // then call it.
     let t = LetElseIfSomeTemplate {
         cond: None,
         check: Some(false),
     }; // instantiate your struct
-    assert_eq!("Hello, fun!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, fun!", t.call().unwrap()); // then call it.
     let t = LetElseIfSomeTemplate {
         cond: None,
         check: None,
     }; // instantiate your struct
-    assert_eq!("Hello, None!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, None!", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -291,7 +291,7 @@ fn test_let_else_if_each_some() {
     }
 
     let t = LetElseIfEachSomeTemplate { conditions }; // instantiate your struct
-    assert_eq!("Hello, barbarbarbarbar!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, barbarbarbarbar!", t.call().unwrap()); // then call it.
 
     let mut conditions = vec![];
     for _ in 0..5 {
@@ -302,7 +302,7 @@ fn test_let_else_if_each_some() {
     }
 
     let t = LetElseIfEachSomeTemplate { conditions }; // instantiate your struct
-    assert_eq!("Hello, NoneNoneNoneNoneNone!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, NoneNoneNoneNoneNone!", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -360,8 +360,8 @@ fn test_else_if_each_some() {
     let t = ElseIfEachSomeTemplate { conditions }; // instantiate your struct
     assert_eq!(
         "Hello, &amp;footrue&amp;footrue&amp;footrue&amp;footrue&amp;footrue!",
-        t.render().unwrap()
-    ); // then render it.
+        t.call().unwrap()
+    ); // then call it.
 
     let mut conditions = vec![];
     for _ in 0..5 {
@@ -372,7 +372,7 @@ fn test_else_if_each_some() {
     }
 
     let t = ElseIfEachSomeTemplate { conditions }; // instantiate your struct
-    assert_eq!("Hello, NoneNoneNoneNoneNone!", t.render().unwrap()); // then render it.
+    assert_eq!("Hello, NoneNoneNoneNoneNone!", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -397,7 +397,7 @@ struct LetLoopTemplate<'a> {
 #[test]
 fn test_let_loop() {
     let t = LetLoopTemplate { name: "&foo" }; // instantiate your struct
-    assert_eq!("&amp;foo!&amp;foo!", t.render().unwrap()); // then render it.
+    assert_eq!("&amp;foo!&amp;foo!", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -417,7 +417,7 @@ struct LetCollectTemplate {
 #[test]
 fn test_let_collect() {
     let t = LetCollectTemplate { a: vec![0, 1] }; // instantiate your struct
-    assert_eq!("13", t.render().unwrap()); // then render it.
+    assert_eq!("13", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -429,10 +429,10 @@ struct TryTemplate {
 #[test]
 fn test_try() {
     let t = TryTemplate { a: Err(Error) }; // instantiate your struct
-    assert!(t.render().is_err()); // then render it.
+    assert!(t.call().is_err()); // then call it.
 
     let t = TryTemplate { a: Ok(1) }; // instantiate your struct
-    assert_eq!("1", t.render().unwrap()); // then render it.
+    assert_eq!("1", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -454,8 +454,8 @@ impl TryMethodTemplate {
 #[test]
 fn test_try_method() {
     let t = TryMethodTemplate { some: false }; // instantiate your struct
-    assert!(t.render().is_err()); // then render it.
+    assert!(t.call().is_err()); // then call it.
 
     let t = TryMethodTemplate { some: true }; // instantiate your struct
-    assert_eq!("foo", t.render().unwrap()); // then render it.
+    assert_eq!("foo", t.call().unwrap()); // then call it.
 }

@@ -19,7 +19,7 @@ fn test_with() {
     let hello = WithTemplate {
         hold: Holder { foo: 0, bar: 1 },
     }; // instantiate your struct
-    assert_eq!("0 1", hello.render().unwrap()); // then render it.
+    assert_eq!("0 1", hello.call().unwrap()); // then call it.
 }
 
 struct DeepHold {
@@ -45,5 +45,5 @@ fn test_with_each() {
             deep: Holder { foo: 0, bar: 1 },
         }],
     }; // instantiate your struct
-    assert_eq!("0 1", hello.render().unwrap()); // then render it.
+    assert_eq!("0 1", hello.call().unwrap()); // then call it.
 }

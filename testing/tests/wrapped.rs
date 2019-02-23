@@ -21,7 +21,7 @@ struct IfTemplate {
 #[test]
 fn test_if() {
     let t = IfTemplate { cond: true }; // instantiate your struct
-    assert_eq!("&amp;", t.render().unwrap()); // then render it.
+    assert_eq!("&amp;", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -33,7 +33,7 @@ struct IndexTemplate<'a> {
 #[test]
 fn test_index() {
     let t = IndexTemplate { arr: vec!["&"] }; // instantiate your struct
-    assert_eq!("&amp;", t.render().unwrap()); // then render it.
+    assert_eq!("&amp;", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -46,7 +46,7 @@ struct SliceTemplate<'a> {
 fn test_slice() {
     let arr: &[&str] = &vec!["&"];
     let t = SliceTemplate { arr }; // instantiate your struct
-    assert_eq!("&amp;", t.render().unwrap()); // then render it.
+    assert_eq!("&amp;", t.call().unwrap()); // then call it.
 }
 
 fn repeat(s: &str, i: usize) -> String {
@@ -62,7 +62,7 @@ struct CallTemplate<'a> {
 #[test]
 fn test_call() {
     let t = CallTemplate { s: "&" }; // instantiate your struct
-    assert_eq!("&amp;&amp;", t.render().unwrap()); // then render it.
+    assert_eq!("&amp;&amp;", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -72,7 +72,7 @@ struct ArrayTemplate;
 #[test]
 fn test_array() {
     let t = ArrayTemplate; // instantiate your struct
-    assert_eq!("&amp;", t.render().unwrap()); // then render it.
+    assert_eq!("&amp;", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -82,7 +82,7 @@ struct TupleTemplate;
 #[test]
 fn test_tuple() {
     let t = TupleTemplate; // instantiate your struct
-    assert_eq!("&amp;", t.render().unwrap()); // then render it.
+    assert_eq!("&amp;", t.call().unwrap()); // then call it.
 }
 
 #[derive(Template)]
@@ -99,5 +99,5 @@ struct Simple {
 #[test]
 fn test_simple() {
     let t = Simple { cond: true, num: 0 }; // instantiate your struct
-    assert_eq!("true10true1true", t.render().unwrap()); // then render it.
+    assert_eq!("true10true1true", t.call().unwrap()); // then call it.
 }

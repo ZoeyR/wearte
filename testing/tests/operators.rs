@@ -11,7 +11,7 @@ struct CompareTemplate {
 #[test]
 fn test_compare() {
     let t = CompareTemplate { a: 1, b: 1, c: 2 };
-    assert_eq!(t.render().unwrap(), "tf\ntf\ntf\ntf\ntf\ntf");
+    assert_eq!(t.call().unwrap(), "tf\ntf\ntf\ntf\ntf\ntf");
 }
 
 #[derive(Template)]
@@ -25,7 +25,7 @@ struct OperatorsTemplate {
 #[test]
 fn test_operators() {
     let t = OperatorsTemplate { a: 1, b: 1, c: 2 };
-    assert_eq!(t.render().unwrap(), "muldivmodaddrshlshbandbxorborandor");
+    assert_eq!(t.call().unwrap(), "muldivmodaddrshlshbandbxorborandor");
 }
 
 #[derive(Template)]
@@ -35,7 +35,7 @@ struct PrecedenceTemplate {}
 #[test]
 fn test_precedence() {
     let t = PrecedenceTemplate {};
-    assert_eq!(t.render().unwrap(), "6".repeat(7));
+    assert_eq!(t.call().unwrap(), "6".repeat(7));
 }
 
 #[derive(Template)]
@@ -49,5 +49,5 @@ struct UnlessOperatorsTemplate {
 #[test]
 fn test_unless_operators() {
     let t = UnlessOperatorsTemplate { a: 1, b: 1, c: 2 };
-    assert_eq!(t.render().unwrap(), "");
+    assert_eq!(t.call().unwrap(), "");
 }

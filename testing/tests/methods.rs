@@ -15,7 +15,7 @@ impl<'a> SelfMethodTemplate<'a> {
 #[test]
 fn test_self_method() {
     let t = SelfMethodTemplate { s: "foo" };
-    assert_eq!(t.render().unwrap(), "foo");
+    assert_eq!(t.call().unwrap(), "foo");
 }
 
 #[derive(Template)]
@@ -35,5 +35,5 @@ fn test_nested() {
     let t = NestedSelfMethodTemplate {
         t: SelfMethodTemplate { s: "foo" },
     };
-    assert_eq!(t.render().unwrap(), "bar foo");
+    assert_eq!(t.call().unwrap(), "bar foo");
 }

@@ -42,7 +42,6 @@ let template = VariablesTemplate {
 Now that our struct is defined lets use it in a HTML template. Yarte templates look like regular HTML, with embedded yarte expressions.
 
 Let's say file `hello.html` looks like this:
-
 ```handlebars
 <div class="entry">
   <h1>{{title}}</h1>
@@ -52,12 +51,10 @@ Let's say file `hello.html` looks like this:
 </div>
 ```
 
-When rendered, 
 ```rust
-template.render().unwrap();
+template.call().unwrap();
 ```
 
-the following html characters will be created, as expected:
 
 ```html
 <div class="entry">
@@ -69,10 +66,19 @@ the following html characters will be created, as expected:
 ```
 
 ## Templating
-Yarte uses opening characters `{{` and closing characters `}}` to parse the inside depending on the feature used. Most of the features are defined by Handlebars such as paths, comments, html, helpers and partials. Others such as adding rust code to a template, are obviously defined by Yarte.    
+Yarte uses opening characters `{{` and closing 
+characters `}}` to parse the inside depending 
+on the feature used. Most of the features are 
+defined by Handlebars such as paths, comments, 
+html, helpers and partials. Others such as 
+adding rust code to a template, are obviously 
+defined by Yarte.    
 
 ## Paths
-Yarte uses Paths so that the template can refer to the values given when creating a new structure. For this simple example we are going to write our template using attributtes `source` and `ext`.
+Yarte uses Paths so that the template can refer 
+to the values given when creating a new structure. 
+For this simple example we are going to write our 
+template using attributes `source` and `ext`.
 
 ```rust
 #[derive(Template)]
@@ -85,8 +91,8 @@ struct HelloTemplate<'a> {
 Above we can see the path `name`
 
 ```rust
-let t = HelloTemplate { name: "world" }; // instantiate your struct
-assert_eq!("Hello, world!", t.render().unwrap()); // then render it.
+let t = HelloTemplate { name: "world" }; // precompile your template
+assert_eq!("Hello, world!", t.call().unwrap()); // then call it.
 ```
 
 ## Comments
@@ -97,7 +103,10 @@ assert_eq!("Hello, world!", t.render().unwrap()); // then render it.
 ```
 
 ## HTML
-Yarte HTML-escapes values returned by a {{expression}}. If you don't want Yarte to escape a value, use the "triple-stash", {{{. For example having the following struct:
+Yarte HTML-escapes values returned by a `{{expression}}`. 
+If you don't want Yarte to escape a value, use the 
+"triple-stash", `{{{`. For example having the following 
+struct:
 
 ```rust
 let t = CardTemplate {
