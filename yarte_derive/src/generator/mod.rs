@@ -3,20 +3,21 @@ use syn::{self, visit::Visit};
 
 use std::{collections::BTreeMap, fmt::Write, mem, path::PathBuf, str};
 
-use crate::input::TemplateInput;
 use crate::parser::{Helper, Node, Ws};
 
 mod ident_buf;
+mod visit_derive;
 mod visit_each;
 mod visits;
 
 use self::ident_buf::Buffer;
+pub(crate) use self::visit_derive::{visit_derive, EscapeMode, Print, Struct};
 use self::visit_each::find_loop_var;
 
 use crate::append_extension;
 
-pub(crate) fn generate(input: &TemplateInput, ctx: Context) -> String {
-    Generator::new(input, ctx).build()
+pub(crate) fn generate(s: &Struct, ctx: Context) -> String {
+    Generator::new(s, ctx).build()
 }
 
 pub(self) type Context<'a> = &'a BTreeMap<&'a PathBuf, Vec<Node<'a>>>;
@@ -33,8 +34,8 @@ enum Writable<'a> {
 }
 
 pub(self) struct Generator<'a> {
-    // The template input state: original struct AST and attributes
-    pub(self) input: &'a TemplateInput<'a>,
+    // Options and
+    pub(self) s: &'a Struct<'a>,
     // Wrapped expression flag
     pub(self) wrapped: bool,
     // will wrap expression Flag
@@ -61,15 +62,15 @@ pub(self) struct Generator<'a> {
 }
 
 impl<'a> Generator<'a> {
-    fn new<'n>(input: &'n TemplateInput, ctx: Context<'n>) -> Generator<'n> {
+    fn new<'n>(s: &'n Struct<'n>, ctx: Context<'n>) -> Generator<'n> {
         Generator {
-            input,
+            s,
             ctx,
             buf_t: String::new(),
             buf_w: vec![],
             next_ws: None,
             on: vec![],
-            on_path: input.path.clone(),
+            on_path: s.path.clone(),
             scp: vec![vec!["self".to_string()]],
             skip_ws: false,
             will_wrap: true,
@@ -87,14 +88,14 @@ impl<'a> Generator<'a> {
         self.impl_template(&mut buf);
 
         if cfg!(feature = "actix-web") {
-            self.impl_actix_web_responder(&mut buf);
+            self.responder(&mut buf);
         }
 
         buf.buf
     }
     // Get mime type
     fn get_mime(&mut self) -> &str {
-        let ext = match self.input.path.extension() {
+        let ext = match self.s.path.extension() {
             Some(s) => s.to_str().unwrap(),
             None => "txt",
         };
@@ -103,7 +104,8 @@ impl<'a> Generator<'a> {
 
     // Implement `Display` for the given context struct
     fn impl_template(&mut self, buf: &mut Buffer) {
-        self.write_header(buf, "::yarte::Template", None);
+        buf.writeln(&self.s.implement_head("::yarte::Template"));
+
         buf.writeln("fn mime() -> &'static str {");
         buf.writeln(&format!("{:?}", self.get_mime()));
         buf.writeln("}");
@@ -115,7 +117,8 @@ impl<'a> Generator<'a> {
 
     // Implement `Display` for the given context struct.
     fn impl_display(&mut self, nodes: &'a [Node], buf: &mut Buffer) {
-        self.write_header(buf, "::std::fmt::Display", None);
+        buf.writeln(&self.s.implement_head("::std::fmt::Display"));
+
         buf.writeln("fn fmt(&self, _fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {");
 
         let last = buf.buf.len();
@@ -128,8 +131,9 @@ impl<'a> Generator<'a> {
     }
 
     // Implement Actix-web's `Responder`.
-    fn impl_actix_web_responder(&mut self, buf: &mut Buffer) {
-        self.write_header(buf, "::yarte::actix_web::Responder", None);
+    fn responder(&mut self, buf: &mut Buffer) {
+        buf.writeln(&self.s.implement_head("::yarte::actix_web::Responder"));
+
         buf.writeln("type Item = ::yarte::actix_web::HttpResponse;");
         buf.writeln("type Error = ::yarte::actix_web::Error;");
         buf.writeln(
@@ -145,31 +149,6 @@ impl<'a> Generator<'a> {
 
         buf.writeln("}");
         buf.writeln("}");
-    }
-
-    // Writes header for the `impl` for `TraitFromPathName` or `Template`
-    // for the given context struct.
-    fn write_header(
-        &mut self,
-        buf: &mut Buffer,
-        target: &str,
-        params: Option<Vec<syn::GenericParam>>,
-    ) {
-        let mut generics = self.input.ast.generics.clone();
-        if let Some(params) = params {
-            for param in params {
-                generics.params.push(param);
-            }
-        }
-        let (_, orig_ty_generics, _) = self.input.ast.generics.split_for_impl();
-        let (impl_generics, _, where_clause) = generics.split_for_impl();
-        buf.writeln(&format!(
-            "{}{} for {}{} {{",
-            quote!(impl#impl_generics),
-            target,
-            self.input.ast.ident,
-            quote!(#orig_ty_generics #where_clause)
-        ));
     }
 
     /* Helper methods for handling node types */
@@ -311,7 +290,7 @@ impl<'a> Generator<'a> {
         self.handle_ws(&ws.0);
         self.write_buf_writable(buf);
 
-        let loop_var = find_loop_var(self.input, self.ctx, self.on_path.clone(), nodes);
+        let loop_var = find_loop_var(self.s, self.ctx, self.on_path.clone(), nodes);
         self.visit_expr(args);
         let id = self.scp.len();
         let ctx = if loop_var {
@@ -415,7 +394,7 @@ impl<'a> Generator<'a> {
     fn visit_partial(&mut self, buf: &mut Buffer, ws: &Ws, path: &str) {
         let mut p = self.on_path.clone();
         p.pop();
-        p.push(append_extension(self.input, path));
+        p.push(append_extension(&self.s.path, path));
         let nodes = self.ctx.get(&p).unwrap();
 
         let p = mem::replace(&mut self.on_path, p);
@@ -501,7 +480,6 @@ impl<'a> Generator<'a> {
             match s {
                 Writable::Lit(s) => buf_lit.write_str(s).unwrap(),
                 Writable::Expr(s, wrapped) => {
-                    use super::input::EscapeMode::*;
                     if !buf_lit.is_empty() {
                         buf.writeln(&format!(
                             "_fmt.write_str({:#?})?;",
@@ -510,7 +488,8 @@ impl<'a> Generator<'a> {
                     }
 
                     buf.writeln(&format!("({}).fmt(_fmt)?;", {
-                        match (wrapped, &self.input.escaping) {
+                        use self::EscapeMode::*;
+                        match (wrapped, &self.s.escaping) {
                             (true, &Html) | (true, &None) | (false, &None) => s,
                             (false, &Html) => format!("::yarte::MarkupDisplay::from(&{})", s),
                         }

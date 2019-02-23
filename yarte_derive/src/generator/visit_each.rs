@@ -3,35 +3,29 @@ use syn::visit::Visit;
 
 use std::{mem, path::PathBuf};
 
-use super::Context;
+use super::{Context, Struct};
 
 use crate::{
     append_extension,
-    input::TemplateInput,
     parser::{Helper, Node},
 };
 
-pub(super) fn find_loop_var(
-    input: &TemplateInput,
-    ctx: Context,
-    path: PathBuf,
-    nodes: &[Node],
-) -> bool {
-    FindEach::new(input, ctx, path).find(nodes)
+pub(super) fn find_loop_var(s: &Struct, ctx: Context, path: PathBuf, nodes: &[Node]) -> bool {
+    FindEach::new(s, ctx, path).find(nodes)
 }
 
 // Find {{ index }} {{ index1 }} {{ first }} {{ last }} {{ _index_[0-9] }}
 struct FindEach<'a> {
     loop_var: bool,
-    input: &'a TemplateInput<'a>,
+    s: &'a Struct<'a>,
     ctx: Context<'a>,
     on_path: PathBuf,
 }
 
 impl<'a> FindEach<'a> {
-    fn new<'n>(input: &'n TemplateInput<'n>, ctx: Context<'n>, on_path: PathBuf) -> FindEach<'n> {
+    fn new<'n>(s: &'n Struct<'n>, ctx: Context<'n>, on_path: PathBuf) -> FindEach<'n> {
         FindEach {
-            input,
+            s,
             ctx,
             on_path,
             loop_var: false,
@@ -76,7 +70,7 @@ impl<'a> FindEach<'a> {
                 Node::Partial(_, path) => {
                     let mut p = self.on_path.clone();
                     p.pop();
-                    p.push(append_extension(self.input, path));
+                    p.push(append_extension(&self.s.path, path));
                     let nodes = self.ctx.get(&p).unwrap();
 
                     let parent = mem::replace(&mut self.on_path, p);

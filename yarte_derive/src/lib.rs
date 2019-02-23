@@ -6,7 +6,6 @@ extern crate nom;
 extern crate quote;
 
 mod generator;
-mod input;
 mod parser;
 
 use proc_macro::TokenStream;
@@ -20,56 +19,52 @@ use std::{
 
 use yarte_config::{read_config_file, Config};
 
-use crate::input::{Print, Source, TemplateInput};
+use crate::generator::{visit_derive, Print, Struct};
 use crate::parser::{parse, parse_partials, Node};
 
 #[proc_macro_derive(Template, attributes(template))]
 pub fn derive_template(input: TokenStream) -> TokenStream {
-    let ast: syn::DeriveInput = syn::parse(input).unwrap();
-    build_template(&ast).parse().unwrap()
+    let i: syn::DeriveInput = syn::parse(input).unwrap();
+    build_template(&i).parse().unwrap()
 }
 
-fn build_template(ast: &syn::DeriveInput) -> String {
-    let config_toml = read_config_file();
-    let config = Config::new(&config_toml);
+fn build_template(i: &syn::DeriveInput) -> String {
+    let config_toml: &str = &read_config_file();
+    let config = &Config::new(config_toml);
 
-    let input = TemplateInput::new(ast, &config);
-    let source = match input.source {
-        Source::Source(ref s) => s.clone(),
-        Source::Path(_) => get_template_source(&input.path),
-    };
+    let s = visit_derive(i, &config);
 
     let mut sources = BTreeMap::new();
 
-    let mut check = vec![(input.path.clone(), source)];
+    let mut check = vec![(s.path.clone(), s.source.clone())];
     while let Some((path, src)) = check.pop() {
-        find_partials(&input, &parse_partials(&src), &path, &mut check);
+        find_partials(&s, &config, &parse_partials(&src), &path, &mut check);
         sources.insert(path, src);
     }
 
     let mut parsed = BTreeMap::new();
-    for (p, s) in &sources {
-        parsed.insert(p, parse(s));
+    for (p, src) in &sources {
+        parsed.insert(p, parse(src));
     }
 
-    if input.print == Print::Ast || input.print == Print::All {
+    if s.print == Print::Ast || s.print == Print::All {
         eprintln!("{:?}\n", parsed);
     }
 
-    let code = generator::generate(&input, &parsed);
-    if input.print == Print::Code || input.print == Print::All {
+    let code = generator::generate(&s, &parsed);
+    if s.print == Print::Code || s.print == Print::All {
         eprintln!("{}", code);
     }
 
     code
 }
 
-fn append_extension(input: &TemplateInput, path: &str) -> PathBuf {
+fn append_extension(parent: &PathBuf, path: &str) -> PathBuf {
     let p = PathBuf::from(path);
     if p.extension().is_some() {
         p
     } else {
-        if let Some(ext) = &input.path.extension() {
+        if let Some(ext) = parent.extension() {
             p.with_extension(ext)
         } else {
             p
@@ -78,7 +73,8 @@ fn append_extension(input: &TemplateInput, path: &str) -> PathBuf {
 }
 
 fn find_partials(
-    input: &TemplateInput,
+    s: &Struct,
+    config: &Config,
     nodes: &[Node],
     path: &PathBuf,
     check: &mut Vec<(PathBuf, String)>,
@@ -86,8 +82,8 @@ fn find_partials(
     for n in nodes {
         match n {
             Node::Partial(_, partial) => {
-                let extends = input.config.find_template(
-                    append_extension(input, partial).to_str().unwrap(),
+                let extends = config.find_template(
+                    append_extension(&s.path, partial).to_str().unwrap(),
                     Some(&path),
                 );
                 let source = get_template_source(&extends);
@@ -98,7 +94,7 @@ fn find_partials(
     }
 }
 
-fn get_template_source(tpl_path: &Path) -> String {
+pub(crate) fn get_template_source(tpl_path: &Path) -> String {
     match fs::read_to_string(tpl_path) {
         Err(_) => panic!(
             "unable to open template file '{}'",
