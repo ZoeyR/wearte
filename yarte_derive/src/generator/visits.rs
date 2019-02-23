@@ -25,6 +25,18 @@ macro_rules! visit_punctuated {
 }
 
 impl<'a> Visit<'a> for Generator<'a> {
+    fn visit_arg_captured(
+        &mut self,
+        syn::ArgCaptured {
+            pat,
+            colon_token,
+            ty,
+        }: &'a syn::ArgCaptured,
+    ) {
+        self.visit_pat(pat);
+        write!(self.buf_t, "{}", quote!(#colon_token#ty)).unwrap();
+    }
+
     fn visit_attribute(&mut self, _i: &'a syn::Attribute) {
         panic!("Not available attributes in a template expression");
     }
@@ -84,8 +96,28 @@ impl<'a> Visit<'a> for Generator<'a> {
         self.buf_t.push(')');
     }
 
-    fn visit_expr_closure(&mut self, i: &'a syn::ExprClosure) {
-        write!(self.buf_t, "{}", quote!(#i)).unwrap();
+    fn visit_expr_closure(
+        &mut self,
+        syn::ExprClosure {
+            attrs,
+            asyncness,
+            movability,
+            capture,
+            inputs,
+            output,
+            body,
+            ..
+        }: &'a syn::ExprClosure,
+    ) {
+        visit_attrs!(self, attrs);
+
+        write!(self.buf_t, "{} |", quote!(#asyncness #movability #capture)).unwrap();
+        self.scp.push(vec![]);
+        visit_punctuated!(self, inputs, visit_fn_arg);
+        write!(self.buf_t, "| ").unwrap();
+        write!(self.buf_t, "{}", quote!(#output)).unwrap();
+        self.visit_expr(body);
+        self.scp.pop();
     }
 
     fn visit_expr_continue(&mut self, i: &'a syn::ExprContinue) {

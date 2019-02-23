@@ -75,6 +75,21 @@ fn test_let_closure() {
 }
 
 #[derive(Template)]
+#[template(
+    source = "{{ let a = |n| name.repeat(n) }}{{ a(1) }}",
+    ext = "txt"
+)]
+struct LetClosureScopeTemplate<'a> {
+    name: &'a str,
+}
+
+#[test]
+fn test_let_closure_scope() {
+    let t = LetClosureScopeTemplate { name: "world" }; // instantiate your struct
+    assert_eq!("world", t.render().unwrap()); // then render it.
+}
+
+#[derive(Template)]
 #[template(source = "{{ let a = name }}Hello, {{ a }}!", ext = "txt")]
 struct LetTemplate<'a> {
     name: &'a str,
