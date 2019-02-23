@@ -1,10 +1,10 @@
 #[macro_use]
 extern crate serde_derive;
-extern crate toml;
 
-use std::env;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 #[derive(Debug)]
 pub struct Config {
@@ -19,9 +19,9 @@ impl Config {
         let raw: RawConfig =
             toml::from_str(&s).expect(&format!("invalid TOML in {}", CONFIG_FILE_NAME));
 
-        let dirs = match raw.general {
-            Some(General { dirs }) => dirs.map_or(default_dirs, |v| {
-                v.into_iter().map(|dir| root.join(dir)).collect()
+        let dirs = match raw.main {
+            Some(Main { dir }) => dir.map_or(default_dirs, |v| {
+                v.iter().map(|dir| root.join(dir)).collect()
             }),
             None => default_dirs,
         };
@@ -33,7 +33,7 @@ impl Config {
         if let Some(root) = start_at {
             let relative = root.with_file_name(path);
             if relative.exists() {
-                return relative.to_owned();
+                return relative;
             }
         }
 
@@ -54,13 +54,13 @@ impl Config {
 #[derive(Deserialize)]
 struct RawConfig<'d> {
     #[serde(borrow)]
-    general: Option<General<'d>>,
+    main: Option<Main<'d>>,
 }
 
 #[derive(Deserialize)]
-struct General<'a> {
+struct Main<'a> {
     #[serde(borrow)]
-    dirs: Option<Vec<&'a str>>,
+    dir: Option<Vec<&'a str>>,
 }
 
 pub fn read_config_file() -> String {
@@ -94,7 +94,7 @@ mod tests {
     fn test_config_dirs() {
         let mut root = PathBuf::from(env::var("CARGO_MANIFEST_DIR").unwrap());
         root.push("tpl");
-        let config = Config::new("[general]\ndirs = [\"tpl\"]");
+        let config = Config::new("[main]\ndir = [\"tpl\"]");
         assert_eq!(config.dirs, vec![root]);
     }
 
