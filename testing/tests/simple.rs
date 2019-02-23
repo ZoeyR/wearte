@@ -24,7 +24,7 @@ fn test_variables() {
          Iñtërnâtiônàlizætiøn is important\n\
          in vars too: Iñtërnâtiônàlizætiøn"
     );
-    assert_eq!(VariablesTemplate::extension(), Some("html"));
+    assert_eq!(VariablesTemplate::mime(), "text/html");
 }
 
 #[derive(Template)]

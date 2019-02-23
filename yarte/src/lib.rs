@@ -19,10 +19,6 @@ pub trait Template: fmt::Display {
     fn render_into(&self, writer: &mut fmt::Write) -> fmt::Result {
         write!(writer, "{}", self)
     }
-    /// Helper function to inspect the template's extension
-    fn extension() -> Option<&'static str>
-    where
-        Self: Sized;
 
     /// Helper function to inspect the template's mime
     fn mime() -> &'static str

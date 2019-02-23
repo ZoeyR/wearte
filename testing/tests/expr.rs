@@ -75,10 +75,7 @@ fn test_let_closure() {
 }
 
 #[derive(Template)]
-#[template(
-    source = "{{ let a = |n| name.repeat(n) }}{{ a(1) }}",
-    ext = "txt"
-)]
+#[template(source = "{{ let a = |n| name.repeat(n) }}{{ a(1) }}", ext = "txt")]
 struct LetClosureScopeTemplate<'a> {
     name: &'a str,
 }

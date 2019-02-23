@@ -104,13 +104,6 @@ impl<'a> Generator<'a> {
     // Implement `Display` for the given context struct
     fn impl_template(&mut self, buf: &mut Buffer) {
         self.write_header(buf, "::yarte::Template", None);
-        buf.writeln("fn extension() -> Option<&'static str> {");
-        buf.writeln(&format!(
-            "{:?}",
-            self.input.path.extension().map(|s| s.to_str().unwrap())
-        ));
-        buf.writeln("}");
-
         buf.writeln("fn mime() -> &'static str {");
         buf.writeln(&format!("{:?}", self.get_mime()));
         buf.writeln("}");
