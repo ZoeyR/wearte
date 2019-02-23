@@ -19,7 +19,7 @@ use std::{
 
 use yarte_config::{read_config_file, Config};
 
-use crate::generator::{visit_derive, Print, Struct};
+use crate::generator::{visit_derive, Print};
 use crate::parser::{parse, parse_partials, Node};
 
 #[proc_macro_derive(Template, attributes(template))]
@@ -38,7 +38,19 @@ fn build_template(i: &syn::DeriveInput) -> String {
 
     let mut check = vec![(s.path.clone(), s.source.clone())];
     while let Some((path, src)) = check.pop() {
-        find_partials(&s, &config, &parse_partials(&src), &path, &mut check);
+        for n in &parse_partials(&src) {
+            match n {
+                Node::Partial(_, partial) => {
+                    let extends = config.find_template(
+                        append_extension(&s.path, partial).to_str().unwrap(),
+                        Some(&path),
+                    );
+                    let source = get_source(&extends);
+                    check.push((extends, source));
+                }
+                _ => unreachable!(),
+            }
+        }
         sources.insert(path, src);
     }
 
@@ -72,39 +84,26 @@ fn append_extension(parent: &PathBuf, path: &str) -> PathBuf {
     }
 }
 
-fn find_partials(
-    s: &Struct,
-    config: &Config,
-    nodes: &[Node],
-    path: &PathBuf,
-    check: &mut Vec<(PathBuf, String)>,
-) {
-    for n in nodes {
-        match n {
-            Node::Partial(_, partial) => {
-                let extends = config.find_template(
-                    append_extension(&s.path, partial).to_str().unwrap(),
-                    Some(&path),
-                );
-                let source = get_template_source(&extends);
-                check.push((extends, source));
+pub(crate) fn get_source(path: &Path) -> String {
+    match fs::read_to_string(path) {
+        Err(_) => panic!("unable to open template file '{:?}'", path),
+        Ok(mut source) => match source
+            .as_bytes()
+            .iter()
+            .enumerate()
+            .rev()
+            .find_map(|(j, x)| {
+                if x.is_ascii_whitespace() {
+                    None
+                } else {
+                    Some(j)
+                }
+            }) {
+            Some(j) => {
+                source.drain(j + 1..);
+                source
             }
-            _ => unreachable!(),
-        }
-    }
-}
-
-pub(crate) fn get_template_source(tpl_path: &Path) -> String {
-    match fs::read_to_string(tpl_path) {
-        Err(_) => panic!(
-            "unable to open template file '{}'",
-            tpl_path.to_str().unwrap()
-        ),
-        Ok(mut source) => {
-            if source.ends_with('\n') {
-                let _ = source.pop();
-            }
-            source
-        }
+            None => source,
+        },
     }
 }

@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use yarte_config::Config;
 
-use crate::get_template_source;
+use crate::get_source;
 
 pub(crate) fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &'a Config) -> Struct<'a> {
     StructBuilder::default().build(i, config)
@@ -75,7 +75,7 @@ impl StructBuilder {
             (Some(src), Some(ext)) => (src, PathBuf::from(format!("{}.{}", ident, ext))),
             (None, None) => {
                 let path = config.find_template(&self.path.expect("some valid path"), None);
-                let source = get_template_source(path.as_path());
+                let source = get_source(path.as_path());
                 (source, path)
             }
             (None, Some(_)) => panic!("'ext' attribute cannot be used with 'path' attribute"),
