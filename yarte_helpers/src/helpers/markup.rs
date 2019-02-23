@@ -2,7 +2,7 @@ use v_htmlescape::escape;
 
 use std::fmt::{self, Display, Formatter};
 
-pub enum MarkupDisplay<'a> {
+pub enum MarkupAsStr<'a> {
     UnSafe(&'a str),
     Safe(SafeTypes<'a>),
 }
@@ -21,9 +21,9 @@ pub enum SafeTypes<'a> {
     Bool(&'a bool),
 }
 
-impl<'a> Display for MarkupDisplay<'a> {
+impl<'a> Display for MarkupAsStr<'a> {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
-        use self::MarkupDisplay::*;
+        use self::MarkupAsStr::*;
         match self {
             UnSafe(s) => escape(s).fmt(f),
             Safe(s) => match s {
@@ -44,10 +44,10 @@ impl<'a> Display for MarkupDisplay<'a> {
 }
 macro_rules! impl_from_string {
     ($($t:ty)+) => ($(
-        impl<'a> From<&'a $t> for MarkupDisplay<'a> {
+        impl<'a> From<&'a $t> for MarkupAsStr<'a> {
             #[inline]
-            fn from(t: &'a $t) -> MarkupDisplay<'a> {
-                MarkupDisplay::UnSafe(t.as_ref())
+            fn from(t: &'a $t) -> MarkupAsStr<'a> {
+                MarkupAsStr::UnSafe(t.as_ref())
             }
         }
     )+)
@@ -58,18 +58,18 @@ impl_from_string!(String &String &&String);
 
 macro_rules! impl_from_for {
     (Str for $($t:ty)+) => ($(
-        impl<'a> From<&'a $t> for MarkupDisplay<'a> {
+        impl<'a> From<&'a $t> for MarkupAsStr<'a> {
             #[inline]
-            fn from(t: &'a $t) -> MarkupDisplay<'a> {
-                MarkupDisplay::UnSafe(t)
+            fn from(t: &'a $t) -> MarkupAsStr<'a> {
+                MarkupAsStr::UnSafe(t)
             }
         }
     )+);
     ($p:ident for $($t:ty)+) => ($(
-        impl<'a> From<&'a $t> for MarkupDisplay<'a> {
+        impl<'a> From<&'a $t> for MarkupAsStr<'a> {
             #[inline]
-            fn from(t: &'a $t) -> MarkupDisplay<'a> {
-                MarkupDisplay::Safe(SafeTypes::$p(t))
+            fn from(t: &'a $t) -> MarkupAsStr<'a> {
+                MarkupAsStr::Safe(SafeTypes::$p(t))
             }
         }
     )+)

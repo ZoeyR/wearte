@@ -3,7 +3,7 @@ use v_htmlescape::fallback::escape;
 
 use std::fmt::{self, Display, Formatter};
 
-pub struct MarkupDisplay<T>(T) where T: AsStr;
+pub struct MarkupAsStr<T>(T) where T: AsStr;
 
 pub trait AsStr: Display {
     fn as_str(&self) -> &str;
@@ -11,21 +11,21 @@ pub trait AsStr: Display {
 
 pub trait Safe {}
 
-impl<T> Display for MarkupDisplay<T> where T: AsStr {
+impl<T> Display for MarkupAsStr<T> where T: AsStr {
     default fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         escape(self.0.as_str()).fmt(f)
     }
 }
 
-impl<T> Display for MarkupDisplay<T> where T: AsStr + Safe {
+impl<T> Display for MarkupAsStr<T> where T: AsStr + Safe {
     fn fmt(&self, f: &mut Formatter) -> fmt::Result {
         self.0.fmt(f)
     }
 }
 
-impl<T> From<T> for MarkupDisplay<T> where T: AsStr {
-    fn from(t: T) -> MarkupDisplay<T> {
-        MarkupDisplay(t)
+impl<T> From<T> for MarkupAsStr<T> where T: AsStr {
+    fn from(t: T) -> MarkupAsStr<T> {
+        MarkupAsStr(t)
     }
 }
 

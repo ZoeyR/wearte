@@ -2,7 +2,7 @@ use std::{fmt, fs};
 
 use yarte_config::{read_config_file, Config};
 pub use yarte_derive::*;
-pub use yarte_helpers::{helpers::MarkupDisplay, Error, Result};
+pub use yarte_helpers::{helpers::MarkupAsStr, Error, Result};
 
 // TODO: document
 pub trait Template: fmt::Display {

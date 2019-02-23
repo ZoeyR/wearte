@@ -491,7 +491,7 @@ impl<'a> Generator<'a> {
                         use self::EscapeMode::*;
                         match (wrapped, &self.s.escaping) {
                             (true, &Html) | (true, &None) | (false, &None) => s,
-                            (false, &Html) => format!("::yarte::MarkupDisplay::from(&{})", s),
+                            (false, &Html) => format!("::yarte::MarkupAsStr::from(&{})", s),
                         }
                     }));
                 }
