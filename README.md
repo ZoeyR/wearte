@@ -21,25 +21,29 @@ Add Yarte dependency to your Cargo.toml file:
 yarte = "0.0"
 ```
 
-In order to use a struct in the template  you will have to call the procedural macro `Template`. For example, in the following code we are going to use struct `VariablesTemplate`, to then define `s` as a `VariablesTemplate` with content.
+In order to use a struct in the template  you will have to call 
+the procedural macro `Template`. For example, in the following 
+code we are going to use struct `CardTemplate`, to then 
+define `s` as a `CardTemplate` with content.
 
 ```rust
 use yarte::Template;
 
 #[derive(Template)]
 #[template(path = "hello.html")]
-struct VariablesTemplate<'a> {
+struct CardTemplate<'a> {
     title: &'a str,
     body: &'a str,
 }
 
-let template = VariablesTemplate {
+let template = CardTemplate {
     title: "My Title",
     body: "My Body",
 };
 ```
     
-Now that our struct is defined lets use it in a HTML template. Yarte templates look like regular HTML, with embedded yarte expressions.
+Now that our struct is defined lets use it in a template. 
+Yarte templates look like regular text, with embedded yarte expressions.
 
 Let's say file `hello.html` looks like this:
 ```handlebars
@@ -51,10 +55,11 @@ Let's say file `hello.html` looks like this:
 </div>
 ```
 
+And call your template for allocate the result in `String` and return 
+it wrapped with yarte::Result
 ```rust
-template.call().unwrap();
+template.call()
 ```
-
 
 ```html
 <div class="entry">
@@ -74,25 +79,18 @@ html, helpers and partials. Others such as
 adding rust code to a template, are obviously 
 defined by Yarte.    
 
-## Paths
-Yarte uses Paths so that the template can refer 
-to the values given when creating a new structure. 
-For this simple example we are going to write our 
-template using attributes `source` and `ext`.
-
 ```rust
+// precompile your template
 #[derive(Template)]
 #[template(source = "Hello, {{ name }}!", ext = "txt")]
 struct HelloTemplate<'a> {
     name: &'a str,
 }
-```
 
-Above we can see the path `name`
-
-```rust
-let t = HelloTemplate { name: "world" }; // precompile your template
-assert_eq!("Hello, world!", t.call().unwrap()); // then call it.
+assert_eq!(
+    "Hello, world!", 
+    HelloTemplate { name: "world" }.call().unwrap() // then call it.
+); 
 ```
 
 ## Comments
