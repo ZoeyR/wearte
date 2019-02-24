@@ -1,5 +1,5 @@
 use actix_web::{Query, Responder};
-use yarte::Template;
+use wearte::Template;
 
 use std::collections::HashMap;
 

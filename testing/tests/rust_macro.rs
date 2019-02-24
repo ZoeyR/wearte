@@ -1,4 +1,4 @@
-use yarte::Template;
+use wearte::Template;
 
 macro_rules! hello {
     () => {

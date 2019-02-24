@@ -1,5 +1,5 @@
-extern crate yarte;
+extern crate wearte;
 
 fn main() {
-    yarte::rerun_if_templates_changed();
+    wearte::rerun_if_templates_changed();
 }

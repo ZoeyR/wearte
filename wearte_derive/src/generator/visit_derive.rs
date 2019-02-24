@@ -3,7 +3,7 @@ use syn::visit::Visit;
 
 use std::path::PathBuf;
 
-use yarte_config::Config;
+use wearte_config::Config;
 
 use crate::get_source;
 

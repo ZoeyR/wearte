@@ -6,7 +6,7 @@ use actix_web::http::header::CONTENT_TYPE;
 use actix_web::test;
 use actix_web::HttpMessage;
 use bytes::Bytes;
-use yarte::Template;
+use wearte::Template;
 
 #[derive(Template)]
 #[template(path = "hello.html")]

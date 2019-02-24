@@ -74,7 +74,7 @@ pub fn read_config_file() -> String {
     }
 }
 
-static CONFIG_FILE_NAME: &str = "yarte.toml";
+static CONFIG_FILE_NAME: &str = "wearte.toml";
 
 #[cfg(test)]
 mod tests {

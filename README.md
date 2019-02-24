@@ -1,40 +1,7 @@
-# \[WIP] Yarte [![Documentation](https://docs.rs/yarte/badge.svg)](https://docs.rs/yarte/) [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build status](https://api.travis-ci.org/rust-iendo/yarte.svg?branch=master)](https://travis-ci.org/rust-iendo/yarte) [![Windows build](https://ci.appveyor.com/api/projects/status/github/rust-iendo/yarte?svg=true)](https://ci.appveyor.com/project/botika/v-htmlescape) [![Downloads](https://img.shields.io/crates/d/yarte.svg)](https://crates.io/crates/yarte)
-Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine, is the fastest template engine. Uses a Handlebars-like syntaxis, well known and intuitive. Yarte is an optimized, and easy-to-use rust crate, with which developers can create logic around their HTML templates using using conditionals, loops, rust code, and predefined functions and using templates within templates.
+# \[WIP] wearte [![Documentation](https://docs.rs/wearte/badge.svg)](https://docs.rs/wearte/) [![Latest version](https://img.shields.io/crates/v/wearte.svg)](https://crates.io/crates/wearte) [![Build status](https://api.travis-ci.org/rust-iendo/wearte.svg?branch=master)](https://travis-ci.org/rust-iendo/wearte) [![Windows build](https://ci.appveyor.com/api/projects/status/github/rust-iendo/wearte?svg=true)](https://ci.appveyor.com/project/botika/v-htmlescape) [![Downloads](https://img.shields.io/crates/d/wearte.svg)](https://crates.io/crates/wearte)
+wearte stands for **W**ow **E**ven **A**nother **R**ust **T**emplate **E**ngine, it is one of the fastest rust template engines. It uses a Handlebars-like syntax.
 
-This crate was forked from [Askama](https://github.com/djc/askama) and refactor 
-every functionality for scalability, resilience and performance.  Well, the current 
-structure were not maintainable and the real need for a solution 
-to the Fortune problem. 
-
-- Remade the parse in push with memchr, nom and syn 
-- Remade the generator from a recursive structure to iterative structure 
-  - Uncoupled and implemented `syn::Visit` with full feature
-  - Wrapped expression
-  - Each variable use detection
-  - If let Some type scope
-  - The only point in common is buf_writable because I wrote it
-- Remade the escape was now optimized with simd with **2Gib/s** and safe types
-    And in nightly without cost with the feature specialization
-- Remade the derive input parser with `syn::Visit` 
-- Remade the trait `Template`, as superTrait of `fmt::Display` implement render directly over `fmt`
-- Remove double allocation filters
-- Decouple and remove all fields of config less dirs for future use
-- Remade all unnecessary recursive flow
-- Remade responder implementation with static `Self::mime`
-- Many structures and functions unnecessary or not according to the current architecture have been eliminated
-
-That is, it has been erased and has been completely redone learning from mistakes.
-
-The performance has almost been multiplied by 3
-```text
-Big table/Askama        time:   [536.39 us 536.60 us 536.88 us]
-Big table/Yarte         time:   [203.51 us 203.64 us 203.81 us]
-
-Teams/Askama            time:   [730.16 ns 731.11 ns 732.20 ns]
-Teams/Yarte             time:   [248.69 ns 248.77 ns 248.85 ns]
-```
-
-#### The fastest, you can see it https://github.com/rust-iendo/template-benchmarks-rs#results
+This crate was forked from [yarte](https://github.com/rust-iendo/yarte) with fixes for the snarky licensing issues. yarte itself is a direct descendant of [askama](https://github.com/djc/askama). You can find copies of their licenses in LICENSE-MIT.
 
 ## Why a derive template engine?
 There are many templates engines based on mustache or/and handlebars,
@@ -42,18 +9,18 @@ I have not known any that derives the compilation of templates to the compiler (
 By deriving this task from another process, we can optimize the instructions 
 generated with our own tools or those of third parties such as LLVM. 
 This is impossible in other cases creating a bottleneck in our web servers 
-that reaches milliseconds. Because of this, `yarte` puts the template in priority 
+that reaches milliseconds. Because of this, `wearte` puts the template in priority 
 by allocating its needs statically. Thus, we write faster than the macro `write!`, 
 easy parallelism and with simd in its default html escape. 
 
 In conclusion a derive is used to be the fastest and simplest.
 
 ## Getting started
-Add Yarte dependency to your Cargo.toml file:
+Add wearte dependency to your Cargo.toml file:
 
 ```toml
 [dependencies]
-yarte = "0.0"
+wearte = "0.0.1"
 ```
 
 In order to use a struct in the template  you will have to call 
@@ -62,7 +29,7 @@ code we are going to use struct `CardTemplate`, to then
 define `s` as a `CardTemplate` with content.
 
 ```rust
-use yarte::Template;
+use wearte::Template;
 
 #[derive(Template)]
 #[template(path = "hello.html")]
@@ -78,7 +45,7 @@ let template = CardTemplate {
 ```
     
 Now that our struct is defined lets use it in a template. 
-Yarte templates look like regular text, with embedded yarte expressions.
+wearte templates look like regular text, with embedded wearte expressions.
 
 Let's say file `hello.html` looks like this:
 ```handlebars
@@ -91,7 +58,7 @@ Let's say file `hello.html` looks like this:
 ```
 
 And call your template for allocate the result in `String` and return 
-it wrapped with yarte::Result
+it wrapped with wearte::Result
 ```rust
 template.call()
 ```
@@ -106,13 +73,13 @@ template.call()
 ```
 
 ## Templating
-Yarte uses opening characters `{{` and closing 
+wearte uses opening characters `{{` and closing 
 characters `}}` to parse the inside depending 
 on the feature used. Most of the features are 
 defined by Handlebars such as paths, comments, 
 html, helpers and partials. Others such as 
 adding rust code to a template, are obviously 
-defined by Yarte.    
+defined by wearte.    
 
 ```rust
 // precompile your template
@@ -136,8 +103,8 @@ assert_eq!(
 ```
 
 ## HTML
-Yarte HTML-escapes values returned by a `{{expression}}`. 
-If you don't want Yarte to escape a value, use the 
+wearte HTML-escapes values returned by a `{{expression}}`. 
+If you don't want wearte to escape a value, use the 
 "triple-stash", `{{{`. For example having the following 
 struct:
 
@@ -237,7 +204,7 @@ Partials can be used to generate faster code using a pre defined functions.
 {{> path/to/file }}
 ```
 ## Rust code
-Yarte provides you with the possibility to use raw rust code within the HTML files. This is limited, but most of essential syntax is supported.
+wearte provides you with the possibility to use raw rust code within the HTML files. This is limited, but most of essential syntax is supported.
     
 ```handlebars
 {{#with getUser(id)?-}}
@@ -315,11 +282,3 @@ Hello, {{#each conditions}}
 - [ ] `>|` filters on fmt::Formatter
 - [ ] Concatenate filters, unix like, on fmt::Formatter (when is possible)
 - [ ] ... you can open a issue!
-
-We are not looking for anything other than render HTML5 and text as fast as possible. 
-You can open a pull request in another case.
-
-##### They are the more fastest, [benchmarks at nightly](https://github.com/rust-iendo/template-benchmarks-rs#rust-template-engine-benchmarks-in-nightly-)
-## Support
-
-[Patreon](https://www.patreon.com/r_iendo)

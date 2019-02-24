@@ -1,5 +1,5 @@
 use std::fmt::Error;
-use yarte::{Result, Template};
+use wearte::{Result, Template};
 
 #[derive(Template)]
 #[template(source = "Hello, {{ name }}!", ext = "txt")]
@@ -423,7 +423,7 @@ fn test_let_collect() {
 #[derive(Template)]
 #[template(source = "{{ a? }}", ext = "html")]
 struct TryTemplate {
-    a: yarte::Result<usize>,
+    a: wearte::Result<usize>,
 }
 
 #[test]

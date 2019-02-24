@@ -9,16 +9,16 @@ members = ["."]
 
 [features]
 default = []
-actix = ["actix-web", "bytes", "yarte/with-actix-web"]
+actix = ["actix-web", "bytes", "wearte/with-actix-web"]
 full = ["actix"]
 
 [dependencies]
 actix-web = { version = "0.7", optional = true }
-yarte = { path = "../yarte", version = "*" }
+wearte = { path = "../wearte", version = "*" }
 bytes = { version = "0.4", optional = true }
 
 [build-dependencies]
-yarte = { path = "../yarte", version = "*" }
+wearte = { path = "../wearte", version = "*" }
 
 [dev-dependencies]
 criterion = "0.2"

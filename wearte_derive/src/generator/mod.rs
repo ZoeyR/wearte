@@ -104,7 +104,7 @@ impl<'a> Generator<'a> {
 
     // Implement `Display` for the given context struct
     fn impl_template(&mut self, buf: &mut Buffer) {
-        buf.writeln(&self.s.implement_head("::yarte::Template"));
+        buf.writeln(&self.s.implement_head("::wearte::Template"));
 
         buf.writeln("fn mime() -> &'static str {");
         buf.writeln(&format!("{:?}", self.get_mime()));
@@ -132,19 +132,19 @@ impl<'a> Generator<'a> {
 
     // Implement Actix-web's `Responder`.
     fn responder(&mut self, buf: &mut Buffer) {
-        buf.writeln(&self.s.implement_head("::yarte::actix_web::Responder"));
+        buf.writeln(&self.s.implement_head("::wearte::actix_web::Responder"));
 
-        buf.writeln("type Item = ::yarte::actix_web::HttpResponse;");
-        buf.writeln("type Error = ::yarte::actix_web::Error;");
+        buf.writeln("type Item = ::wearte::actix_web::HttpResponse;");
+        buf.writeln("type Error = ::wearte::actix_web::Error;");
         buf.writeln(
-            "fn respond_to<S>(self, _req: &::yarte::actix_web::HttpRequest<S>) \
+            "fn respond_to<S>(self, _req: &::wearte::actix_web::HttpRequest<S>) \
              -> ::std::result::Result<Self::Item, Self::Error> {",
         );
 
         buf.writeln(
             "self.call()
                 .map(|s| Self::Item::Ok().content_type(Self::mime()).body(s))
-                .map_err(|_| ::yarte::actix_web::ErrorInternalServerError(\"Template parsing error\"))"
+                .map_err(|_| ::wearte::actix_web::ErrorInternalServerError(\"Template parsing error\"))"
         );
 
         buf.writeln("}");
@@ -491,7 +491,7 @@ impl<'a> Generator<'a> {
                         use self::EscapeMode::*;
                         match (wrapped, &self.s.escaping) {
                             (true, &Html) | (true, &None) | (false, &None) => s,
-                            (false, &Html) => format!("::yarte::MarkupAsStr::from(&{})", s),
+                            (false, &Html) => format!("::wearte::MarkupAsStr::from(&{})", s),
                         }
                     }));
                 }

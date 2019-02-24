@@ -4,7 +4,7 @@ use actix_web::{http, server, App};
 mod template;
 
 fn main() {
-    let sys = actix::System::new("example-yarte");
+    let sys = actix::System::new("example-wearte");
 
     // start http server
     server::new(move || {

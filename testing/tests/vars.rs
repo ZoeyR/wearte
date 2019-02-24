@@ -1,4 +1,4 @@
-use yarte::Template;
+use wearte::Template;
 
 #[derive(Template)]
 #[template(source = "{{ let v = s }}{{ v }}", ext = "txt")]

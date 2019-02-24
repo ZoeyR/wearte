@@ -17,7 +17,7 @@ use std::{
     path::{Path, PathBuf},
 };
 
-use yarte_config::{read_config_file, Config};
+use wearte_config::{read_config_file, Config};
 
 use crate::generator::{visit_derive, Print};
 use crate::parser::{parse, parse_partials, Node};

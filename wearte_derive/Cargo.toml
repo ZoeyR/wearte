@@ -1,0 +1,33 @@
+[package]
+name = "wearte_derive"
+version = "0.0.1"
+authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>", "Rust-iendo Barcelona <riendocontributions@gmail.com>", "Daniel Griffen <daniel@griffen.io>"]
+description = "Procedural macro package for wearte"
+documentation = "https://docs.rs/wearte_derive"
+keywords = ["markup", "template", "handlebars", "html", "wearte_derive"]
+categories = ["template-engine"]
+homepage = "https://github.com/dgriffen/wearte"
+repository = "https://github.com/dgriffen/wearte"
+license = "MIT/Apache-2.0"
+workspace = ".."
+readme = "../README.md"
+edition = "2018"
+
+[badges]
+travis-ci = { repository = "dgriffen/wearte" }
+maintenance = { status = "actively-developed" }
+
+[lib]
+proc-macro = true
+
+[features]
+actix-web = []
+
+[dependencies]
+wearte_config = { version = "0.0", path = "../wearte_config" }
+memchr = "2.1"
+mime_guess = "2.0.0-alpha"
+nom = "4.2"
+proc-macro2 = "0.4"
+quote = "0.6"
+syn = { version="0.15", features = ["full", "visit", "extra-traits"]}

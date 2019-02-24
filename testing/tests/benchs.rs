@@ -1,4 +1,4 @@
-use yarte::Template;
+use wearte::Template;
 
 #[test]
 fn big_table() {

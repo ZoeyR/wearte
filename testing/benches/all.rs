@@ -1,9 +1,9 @@
-extern crate yarte;
+extern crate wearte;
 #[macro_use]
 extern crate criterion;
 
 use criterion::Criterion;
-use yarte::Template;
+use wearte::Template;
 
 mod fmt;
 mod std_write;

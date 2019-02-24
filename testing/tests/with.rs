@@ -1,4 +1,4 @@
-use yarte::Template;
+use wearte::Template;
 
 struct Holder {
     foo: usize,

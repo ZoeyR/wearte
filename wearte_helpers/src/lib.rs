@@ -1,4 +1,4 @@
-#![cfg_attr(yarte_nightly, feature(specialization))]
+#![cfg_attr(wearte_nightly, feature(specialization))]
 
 #[macro_use]
 extern crate cfg_if;
