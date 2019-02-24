@@ -1,6 +1,6 @@
 [package]
 name = "yarte_derive"
-version = "0.0.4"
+version = "0.0.5"
 authors = ["Rust-iendo Barcelona <riendocontributions@gmail.com>"]
 description = "Procedural macro package for yarte"
 documentation = "https://docs.rs/yarte_derive"
