@@ -1,6 +1,41 @@
 # \[WIP] Yarte [![Documentation](https://docs.rs/yarte/badge.svg)](https://docs.rs/yarte/) [![Latest version](https://img.shields.io/crates/v/yarte.svg)](https://crates.io/crates/yarte) [![Build status](https://api.travis-ci.org/rust-iendo/yarte.svg?branch=master)](https://travis-ci.org/rust-iendo/yarte) [![Windows build](https://ci.appveyor.com/api/projects/status/github/rust-iendo/yarte?svg=true)](https://ci.appveyor.com/project/botika/v-htmlescape) [![Downloads](https://img.shields.io/crates/d/yarte.svg)](https://crates.io/crates/yarte)
 Yarte stands for **Y**et **A**nother **R**ust **T**emplate **E**ngine, is the fastest template engine. Uses a Handlebars-like syntaxis, well known and intuitive. Yarte is an optimized, and easy-to-use rust crate, with which developers can create logic around their HTML templates using using conditionals, loops, rust code, and predefined functions and using templates within templates.
 
+This crate was forked from [Askama](https://github.com/djc/askama) and refactor 
+every functionality for scalability, resilience and performance.  Well, the current 
+structure were not maintainable and the real need for a solution 
+to the Fortune problem. 
+
+- Remade the parse in push with memchr, nom and syn 
+- Remade the generator from a recursive structure to iterative structure 
+  - Uncoupled and implemented `syn::Visit` with full feature
+  - Wrapped expression
+  - Each variable use detection
+  - If let Some type scope
+  - The only point in common is buf_writable because I wrote it
+- Remade the escape was now optimized with simd with **2Gib/s** and safe types
+    And in nightly without cost with the feature specialization
+- Remade the derive input parser with `syn::Visit` 
+- Remade the trait `Template`, as superTrait of `fmt::Display` implement render directly over `fmt`
+- Remade remove double allocation filters
+- Remade decouple and remove all fields of config less dirs for future use
+- Remade all unnecessary recursive flow
+- Remade responder implementation with static `Self::mime`
+- Many structures and functions unnecessary or not according to the current architecture have been eliminated
+
+That is, it has been erased and has been completely redone learning from mistakes.
+
+The performance has almost been multiplied by 3
+```text
+Big table/Askama        time:   [536.39 us 536.60 us 536.88 us]
+Big table/Yarte         time:   [203.51 us 203.64 us 203.81 us]
+
+Teams/Askama            time:   [730.16 ns 731.11 ns 732.20 ns]
+Teams/Yarte             time:   [248.69 ns 248.77 ns 248.85 ns]
+```
+
+##### The fastest, you can see it https://github.com/rust-iendo/template-benchmarks-rs#results
+
 ## Why a derive template engine?
 There are many templates engines based on mustache or/and handlebars,
 I have not known any that derives the compilation of templates to the compiler (like [askama](https://github.com/djc/askama)).
