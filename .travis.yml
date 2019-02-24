@@ -34,18 +34,16 @@ before_script:
 script:
   - |
     if [[ -z "$STAGE" ]]; then
-    cargo build --release --verbose
-    cargo test
-    cargo test --release --verbose
-    cd testing
-    cargo test --features full
+    cargo test &&\
+    cd testing &&\
+    cargo test --features full &&\
     cd ..
     fi
   - |
     if [[ "${TRAVIS_RUST_VERSION}" == "stable" ]]; then
-    cargo fmt -- --check
-    cd testing
-    cargo fmt -- --check
+    cargo fmt -- --check &&\
+    cd testing &&\
+    cargo fmt -- --check &&\
     cd ..
     fi
 

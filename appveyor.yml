@@ -18,4 +18,4 @@ build: false
 
 test_script:
   - cargo test
-  - cd testing && cargo test
+  - cd testing && cargo test --features full
