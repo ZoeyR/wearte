@@ -17,8 +17,8 @@ to the Fortune problem.
     And in nightly without cost with the feature specialization
 - Remade the derive input parser with `syn::Visit` 
 - Remade the trait `Template`, as superTrait of `fmt::Display` implement render directly over `fmt`
-- Remade remove double allocation filters
-- Remade decouple and remove all fields of config less dirs for future use
+- Remove double allocation filters
+- Decouple and remove all fields of config less dirs for future use
 - Remade all unnecessary recursive flow
 - Remade responder implementation with static `Self::mime`
 - Many structures and functions unnecessary or not according to the current architecture have been eliminated
@@ -34,7 +34,7 @@ Teams/Askama            time:   [730.16 ns 731.11 ns 732.20 ns]
 Teams/Yarte             time:   [248.69 ns 248.77 ns 248.85 ns]
 ```
 
-##### The fastest, you can see it https://github.com/rust-iendo/template-benchmarks-rs#results
+#### The fastest, you can see it https://github.com/rust-iendo/template-benchmarks-rs#results
 
 ## Why a derive template engine?
 There are many templates engines based on mustache or/and handlebars,
