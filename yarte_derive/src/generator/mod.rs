@@ -142,7 +142,7 @@ impl<'a> Generator<'a> {
         );
 
         buf.writeln(
-            "self.render()
+            "self.call()
                 .map(|s| Self::Item::Ok().content_type(Self::mime()).body(s))
                 .map_err(|_| ::yarte::actix_web::ErrorInternalServerError(\"Template parsing error\"))"
         );
