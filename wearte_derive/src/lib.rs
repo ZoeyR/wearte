@@ -1,3 +1,13 @@
+//!
+//! `wearte_derive` is the core of the crate, and where the procedural macro `derive(Tempalte)` is
+//! implemented. `wearte_derive` will have as input a template file and the definition of the struct
+//! that goes together. With this, wearte will parse the file and the struct to create an **ast**,
+//! and will provide the user's struct the functionality of `fmt` for the template.
+//! Derivation is implements `fmt::Display`, superTrait of `Template`, and if activated,
+//! `actix_web::Responder` will be implemented on the user's struct.
+//! `Template` is defined in the main wearte crate and implements `fmt` in functions like
+//! `call`, `call_into_fmt`, `call_into_io`, `mime `, and `size_hint `.
+//!
 extern crate proc_macro;
 
 #[macro_use]
@@ -6,29 +16,28 @@ extern crate nom;
 extern crate quote;
 
 mod generator;
+mod logger;
 mod parser;
 
 use proc_macro::TokenStream;
 use syn;
 
-use std::{
-    collections::BTreeMap,
-    fs,
-    path::{Path, PathBuf},
-};
+use std::collections::BTreeMap;
 
 use wearte_config::{read_config_file, Config};
 
 use crate::generator::{visit_derive, Print};
+use crate::logger::log;
 use crate::parser::{parse, parse_partials, Node};
+use wearte_config::PrintConfig;
 
 #[proc_macro_derive(Template, attributes(template))]
-pub fn derive_template(input: TokenStream) -> TokenStream {
-    let i: syn::DeriveInput = syn::parse(input).unwrap();
-    build_template(&i).parse().unwrap()
+pub fn derive(input: TokenStream) -> TokenStream {
+    build(&syn::parse(input).unwrap())
 }
 
-fn build_template(i: &syn::DeriveInput) -> String {
+#[inline]
+fn build(i: &syn::DeriveInput) -> TokenStream {
     let config_toml: &str = &read_config_file();
     let config = &Config::new(config_toml);
 
@@ -36,17 +45,12 @@ fn build_template(i: &syn::DeriveInput) -> String {
 
     let mut sources = BTreeMap::new();
 
-    let mut check = vec![(s.path.clone(), s.source.clone())];
+    let mut check = vec![(s.path.clone(), s.src.clone())];
     while let Some((path, src)) = check.pop() {
         for n in &parse_partials(&src) {
             match n {
-                Node::Partial(_, partial) => {
-                    let extends = config.find_template(
-                        append_extension(&s.path, partial).to_str().unwrap(),
-                        Some(&path),
-                    );
-                    let source = get_source(&extends);
-                    check.push((extends, source));
+                Node::Partial(_, partial, _) => {
+                    check.push(config.get_partial(&path, partial));
                 }
                 _ => unreachable!(),
             }
@@ -59,51 +63,22 @@ fn build_template(i: &syn::DeriveInput) -> String {
         parsed.insert(p, parse(src));
     }
 
-    if s.print == Print::Ast || s.print == Print::All {
+    if config.print_override == PrintConfig::Ast
+        || config.print_override == PrintConfig::All
+        || s.print == Print::Ast
+        || s.print == Print::All
+    {
         eprintln!("{:?}\n", parsed);
     }
 
-    let code = generator::generate(&s, &parsed);
-    if s.print == Print::Code || s.print == Print::All {
-        eprintln!("{}", code);
+    let code = generator::generate(&config, &s, &parsed);
+    if config.print_override == PrintConfig::Code
+        || config.print_override == PrintConfig::All
+        || s.print == Print::Code
+        || s.print == Print::All
+    {
+        log(&code, s.path.to_str().unwrap().to_owned(), &config.debug);
     }
 
-    code
-}
-
-fn append_extension(parent: &PathBuf, path: &str) -> PathBuf {
-    let p = PathBuf::from(path);
-    if p.extension().is_some() {
-        p
-    } else {
-        if let Some(ext) = parent.extension() {
-            p.with_extension(ext)
-        } else {
-            p
-        }
-    }
-}
-
-pub(crate) fn get_source(path: &Path) -> String {
-    match fs::read_to_string(path) {
-        Err(_) => panic!("unable to open template file '{:?}'", path),
-        Ok(mut source) => match source
-            .as_bytes()
-            .iter()
-            .enumerate()
-            .rev()
-            .find_map(|(j, x)| {
-                if x.is_ascii_whitespace() {
-                    None
-                } else {
-                    Some(j)
-                }
-            }) {
-            Some(j) => {
-                source.drain(j + 1..);
-                source
-            }
-            None => source,
-        },
-    }
+    code.parse().unwrap()
 }

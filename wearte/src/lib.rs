@@ -1,24 +1,36 @@
-use std::{fmt, fs};
+// TODO: document
 
-use wearte_config::{read_config_file, Config};
-pub use wearte_derive::*;
+use std::{fmt, io};
+
+pub use wearte_derive::Template;
 pub use wearte_helpers::{helpers::MarkupAsStr, Error, Result};
+
+pub mod rerun;
 
 // TODO: document
 pub trait Template: fmt::Display {
+    // esto crea un string fmt sobre Template y te el String
     fn call(&self) -> Result<String> {
         let mut buf = String::with_capacity(Self::size_hint());
-        self.call_into(&mut buf)?;
-        Ok(buf)
+        self.call_into_fmt(&mut buf).map(|_| buf)
     }
-    fn call_into(&self, writer: &mut fmt::Write) -> fmt::Result {
+
+    // esto es para un tipo string vect o algo asi
+    fn call_into_fmt(&self, writer: &mut fmt::Write) -> fmt::Result {
         write!(writer, "{}", self)
     }
 
+    // esto es para un archivo, stdout
+    fn call_into_io(&self, writer: &mut io::Write) -> io::Result<()> {
+        write!(writer, "{}", self)
+    }
+
+    // https://developer.mozilla.org/en-US/docs/Web/HTTP/Basics_of_HTTP/MIME_types
     fn mime() -> &'static str
     where
         Self: Sized;
 
+    // heuristica de allocation
     fn size_hint() -> usize;
 }
 
@@ -27,25 +39,4 @@ pub mod actix_web {
     pub use actix_web::{
         error::ErrorInternalServerError, Error, HttpRequest, HttpResponse, Responder,
     };
-}
-
-// TODO:
-pub fn rerun_if_templates_changed() {
-    let file = read_config_file();
-    let mut stack = Config::new(&file).dirs;
-    loop {
-        if let Some(dir) = stack.pop() {
-            for entry in fs::read_dir(dir).expect("valid directory") {
-                let entry = entry.expect("valid directory entry");
-                let path = entry.path();
-                if path.is_dir() {
-                    stack.push(path);
-                } else {
-                    println!("cargo:rerun-if-changed={}", entry.path().to_str().unwrap());
-                }
-            }
-        } else {
-            break;
-        }
-    }
 }

@@ -1,24 +1,41 @@
 use mime_guess::get_mime_type_str;
 use syn::{self, visit::Visit};
 
-use std::{collections::BTreeMap, fmt::Write, mem, path::PathBuf, str};
+use std::{
+    collections::BTreeMap,
+    fmt::{self, Write},
+    mem,
+    path::PathBuf,
+    str,
+};
 
-use crate::parser::{Helper, Node, Ws};
+use wearte_config::Config;
 
-mod ident_buf;
+mod validator;
 mod visit_derive;
 mod visit_each;
 mod visits;
 
-use self::ident_buf::Buffer;
-pub(crate) use self::visit_derive::{visit_derive, EscapeMode, Print, Struct};
+pub(crate) use self::visit_derive::{visit_derive, Print, Struct};
 use self::visit_each::find_loop_var;
 
-use crate::append_extension;
+use crate::parser::{Helper, Node, Ws};
 
-pub(crate) fn generate(s: &Struct, ctx: Context) -> String {
-    Generator::new(s, ctx).build()
+pub(crate) fn generate(c: &Config, s: &Struct, ctx: Context) -> String {
+    Generator::new(c, s, ctx).build()
 }
+
+pub(crate) trait EWrite: fmt::Write {
+    fn write(&mut self, s: &dyn fmt::Display) {
+        write!(self, "{}", s).unwrap()
+    }
+
+    fn writeln(&mut self, s: &dyn fmt::Display) {
+        writeln!(self, "{}", s).unwrap()
+    }
+}
+
+impl EWrite for String {}
 
 pub(self) type Context<'a> = &'a BTreeMap<&'a PathBuf, Vec<Node<'a>>>;
 
@@ -34,14 +51,14 @@ enum Writable<'a> {
 }
 
 pub(self) struct Generator<'a> {
-    // Options and
+    pub(self) c: &'a Config<'a>,
+    // ast of DeriveInput
     pub(self) s: &'a Struct<'a>,
-    // Wrapped expression flag
+    // wrapped expression flag
     pub(self) wrapped: bool,
     // will wrap expression Flag
     pub(self) will_wrap: bool,
     // buffer for tokens
-    // TODO: why not use TokenStream
     pub(self) buf_t: String,
     // Scope stack
     pub(self) scp: Vec<Vec<String>>,
@@ -49,21 +66,21 @@ pub(self) struct Generator<'a> {
     pub(self) on: Vec<On>,
     // buffer for writable
     buf_w: Vec<Writable<'a>>,
-    // Suffix whitespace from the previous literal. Will be flushed to the
-    // output buffer unless suppressed by whitespace suppression on the next
-    // non-literal.
-    next_ws: Option<&'a str>,
-    // Whitespace suppression from the previous non-literal. Will be used to
-    // determine whether to flush prefix whitespace from the next literal.
-    skip_ws: bool,
+    // path - nodes
     ctx: Context<'a>,
+    // current file path
     on_path: PathBuf,
+    // heuristic based on https://github.com/lfairy/maud
     size_hint: usize,
+    // whitespace flag and buffer based on https://github.com/djc/askama
+    next_ws: Option<&'a str>,
+    skip_ws: bool,
 }
 
 impl<'a> Generator<'a> {
-    fn new<'n>(s: &'n Struct<'n>, ctx: Context<'n>) -> Generator<'n> {
+    fn new<'n>(c: &'n Config<'n>, s: &'n Struct<'n>, ctx: Context<'n>) -> Generator<'n> {
         Generator {
+            c,
             s,
             ctx,
             buf_t: String::new(),
@@ -79,89 +96,103 @@ impl<'a> Generator<'a> {
         }
     }
 
-    // generates the relevant implementations.
     fn build(&mut self) -> String {
-        let mut buf = Buffer::new(0);
+        let mut buf = String::new();
 
         let nodes: &[Node] = self.ctx.get(&self.on_path).unwrap();
-        self.impl_display(nodes, &mut buf);
-        self.impl_template(&mut buf);
+        self.display(nodes, &mut buf);
+
+        debug_assert_ne!(self.size_hint, 0);
+        self.template(&mut buf);
 
         if cfg!(feature = "actix-web") {
             self.responder(&mut buf);
         }
 
-        buf.buf
+        buf
     }
-    // Get mime type
+
     fn get_mime(&mut self) -> &str {
-        let ext = match self.s.path.extension() {
-            Some(s) => s.to_str().unwrap(),
-            None => "txt",
+        let ext = if self.s.wrapped {
+            match self.s.path.extension() {
+                Some(s) => s.to_str().unwrap(),
+                None => "txt",
+            }
+        } else {
+            "html"
         };
+
         get_mime_type_str(ext).expect("valid mime ext")
     }
 
-    // Implement `Display` for the given context struct
-    fn impl_template(&mut self, buf: &mut Buffer) {
-        buf.writeln(&self.s.implement_head("::wearte::Template"));
+    fn template(&mut self, buf: &mut String) {
+        self.s.implement_head("::wearte::Template", buf);
 
-        buf.writeln("fn mime() -> &'static str {");
-        buf.writeln(&format!("{:?}", self.get_mime()));
-        buf.writeln("}");
-        buf.writeln("fn size_hint() -> usize {");
-        buf.writeln(&format!("{}", self.size_hint));
-        buf.writeln("}");
-        buf.writeln("}");
+        buf.writeln(&"fn mime() -> &'static str {");
+        writeln!(buf, "{:?}", self.get_mime()).unwrap();
+        buf.writeln(&"}");
+        buf.writeln(&"fn size_hint() -> usize {");
+        buf.writeln(&self.size_hint);
+        buf.writeln(&"}");
+        buf.writeln(&"}");
     }
 
-    // Implement `Display` for the given context struct.
-    fn impl_display(&mut self, nodes: &'a [Node], buf: &mut Buffer) {
-        buf.writeln(&self.s.implement_head("::std::fmt::Display"));
+    fn display(&mut self, nodes: &'a [Node], buf: &mut String) {
+        self.s.implement_head("::std::fmt::Display", buf);
 
-        buf.writeln("fn fmt(&self, _fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {");
+        buf.writeln(&"fn fmt(&self, _fmt: &mut ::std::fmt::Formatter) -> ::std::fmt::Result {");
 
-        let last = buf.buf.len();
+        let last = buf.len();
+
         self.handle(nodes, buf);
-        self.size_hint = buf.buf.len() - last;
-        buf.writeln("Ok(())");
+        debug_assert_eq!(self.scp.len(), 1);
+        debug_assert_eq!(self.scp[0][0], "self");
+        debug_assert_eq!(self.on.len(), 0);
+        debug_assert_eq!(self.on_path, self.s.path);
+        debug_assert!(self.will_wrap);
+        self.write_buf_writable(buf);
+        self.size_hint = 1 + buf.len() - last;
 
-        buf.writeln("}");
-        buf.writeln("}");
+        buf.writeln(&quote!(Ok(())));
+
+        buf.writeln(&"}");
+        buf.writeln(&"}");
     }
 
-    // Implement Actix-web's `Responder`.
-    fn responder(&mut self, buf: &mut Buffer) {
-        buf.writeln(&self.s.implement_head("::wearte::actix_web::Responder"));
+    fn responder(&mut self, buf: &mut String) {
+        self.s.implement_head("::wearte::actix_web::Responder", buf);
 
-        buf.writeln("type Item = ::wearte::actix_web::HttpResponse;");
-        buf.writeln("type Error = ::wearte::actix_web::Error;");
+        buf.writeln(&"type Item = ::wearte::actix_web::HttpResponse;");
+        buf.writeln(&"type Error = ::wearte::actix_web::Error;");
         buf.writeln(
-            "fn respond_to<S>(self, _req: &::wearte::actix_web::HttpRequest<S>) \
-             -> ::std::result::Result<Self::Item, Self::Error> {",
+            &"fn respond_to<S>(self, _req: &::wearte::actix_web::HttpRequest<S>) \
+              -> ::std::result::Result<Self::Item, Self::Error> {",
         );
 
         buf.writeln(
-            "self.call()
+            &"self.call()
                 .map(|s| Self::Item::Ok().content_type(Self::mime()).body(s))
                 .map_err(|_| ::wearte::actix_web::ErrorInternalServerError(\"Template parsing error\"))"
         );
 
-        buf.writeln("}");
-        buf.writeln("}");
+        buf.writeln(&"}");
+        buf.writeln(&"}");
     }
 
-    /* Helper methods for handling node types */
-    fn handle(&mut self, nodes: &'a [Node], buf: &mut Buffer) {
+    fn handle(&mut self, nodes: &'a [Node], buf: &mut String) {
         for n in nodes {
             match n {
-                Node::Let(expr) => {
+                Node::Local(expr) => {
+                    validator::statement(expr);
+
                     self.skip_ws();
                     self.write_buf_writable(buf);
                     self.visit_stmt(expr);
                     buf.writeln(&mem::replace(&mut self.buf_t, String::new()));
                 }
                 Node::Safe(ws, expr) => {
+                    validator::expression(expr);
+
                     self.visit_expr(expr);
                     self.handle_ws(ws);
                     self.buf_w.push(Writable::Expr(
@@ -170,6 +201,8 @@ impl<'a> Generator<'a> {
                     ));
                 }
                 Node::Expr(ws, expr) => {
+                    validator::expression(expr);
+
                     self.wrapped = false;
                     self.visit_expr(expr);
                     self.handle_ws(ws);
@@ -180,13 +213,14 @@ impl<'a> Generator<'a> {
                 }
                 Node::Lit(l, lit, r) => self.visit_lit(l, lit, r),
                 Node::Helper(h) => self.visit_helper(buf, h),
-                Node::Partial(ws, path) => self.visit_partial(buf, ws, path),
+                Node::Partial(ws, path, expr) => self.visit_partial(buf, ws, path, expr),
                 Node::Comment(..) => self.skip_ws(),
+                Node::Raw(ws, l, v, r) => {
+                    self.handle_ws(&ws.0);
+                    self.visit_lit(l, v, r);
+                    self.handle_ws(&ws.1);
+                }
             }
-        }
-
-        if self.on.is_empty() {
-            self.write_buf_writable(buf);
         }
     }
 
@@ -212,7 +246,7 @@ impl<'a> Generator<'a> {
         }
     }
 
-    fn visit_helper(&mut self, buf: &mut Buffer, h: &'a Helper<'a>) {
+    fn visit_helper(&mut self, buf: &mut String, h: &'a Helper<'a>) {
         use crate::parser::Helper::*;
         match h {
             Each(ws, e, b) => self.visit_each(buf, ws, e, b),
@@ -225,31 +259,23 @@ impl<'a> Generator<'a> {
 
     fn visit_unless(
         &mut self,
-        buf: &mut Buffer,
+        buf: &mut String,
         ws: &'a (Ws, Ws),
         args: &'a syn::Expr,
         nodes: &'a [Node<'a>],
     ) {
+        validator::unless(args);
+
         self.handle_ws(&ws.0);
         self.write_buf_writable(buf);
 
-        use syn::Expr::*;
-        match args {
-            Binary(..) | Call(..) | MethodCall(..) | Index(..) | Field(..) | Path(..)
-            | Paren(..) | Macro(..) | Lit(..) | Try(..) => (),
-            Unary(syn::ExprUnary { op, .. }) => {
-                if let syn::UnOp::Not(..) = op {
-                    panic!("Unary negate operator in unless helper, use if helper instead")
-                }
-            }
-            _ => panic!("unless helper not accept some arguments"),
-        }
-
         self.visit_expr(args);
-        buf.writeln(&format!(
+        writeln!(
+            buf,
             "if !({}) {{",
             mem::replace(&mut self.buf_t, String::new())
-        ));
+        )
+        .unwrap();
 
         self.scp.push(vec![]);
         self.handle(nodes, buf);
@@ -257,16 +283,18 @@ impl<'a> Generator<'a> {
 
         self.handle_ws(&ws.1);
         self.write_buf_writable(buf);
-        buf.writeln("}");
+        buf.writeln(&"}");
     }
 
     fn visit_with(
         &mut self,
-        buf: &mut Buffer,
+        buf: &mut String,
         ws: &'a (Ws, Ws),
         args: &'a syn::Expr,
         nodes: &'a [Node<'a>],
     ) {
+        validator::scope(args);
+
         self.handle_ws(&ws.0);
         self.visit_expr(args);
         self.on.push(On::With(self.scp.len()));
@@ -282,49 +310,59 @@ impl<'a> Generator<'a> {
 
     fn visit_each(
         &mut self,
-        buf: &mut Buffer,
+        buf: &mut String,
         ws: &'a (Ws, Ws),
         args: &'a syn::Expr,
         nodes: &'a [Node<'a>],
     ) {
+        validator::each(args);
+
         self.handle_ws(&ws.0);
         self.write_buf_writable(buf);
 
-        let loop_var = find_loop_var(self.s, self.ctx, self.on_path.clone(), nodes);
+        let loop_var = find_loop_var(self.c, self.ctx, self.on_path.clone(), nodes);
         self.visit_expr(args);
         let id = self.scp.len();
         let ctx = if loop_var {
             let ctx = vec![format!("_key_{}", id), format!("_index_{}", id)];
             if let syn::Expr::Range(..) = args {
-                buf.writeln(&format!(
+                writeln!(
+                    buf,
                     "for ({}, {}) in ({}).enumerate() {{",
                     ctx[1],
                     ctx[0],
                     &mem::replace(&mut self.buf_t, String::new())
-                ));
+                )
+                .unwrap();
             } else {
-                buf.writeln(&format!(
+                writeln!(
+                    buf,
                     "for ({}, {}) in (&{}).into_iter().enumerate() {{",
                     ctx[1],
                     ctx[0],
                     &mem::replace(&mut self.buf_t, String::new())
-                ));
+                )
+                .unwrap();
             }
             ctx
         } else {
             let ctx = vec![format!("_key_{}", id)];
             if let syn::Expr::Range(..) = args {
-                buf.writeln(&format!(
+                writeln!(
+                    buf,
                     "for {} in {} {{",
                     ctx[0],
                     &mem::replace(&mut self.buf_t, String::new())
-                ));
+                )
+                .unwrap();
             } else {
-                buf.writeln(&format!(
+                writeln!(
+                    buf,
                     "for {} in (&{}).into_iter() {{",
                     ctx[0],
                     &mem::replace(&mut self.buf_t, String::new())
-                ));
+                )
+                .unwrap();
             }
             ctx
         };
@@ -337,39 +375,47 @@ impl<'a> Generator<'a> {
 
         self.scp.pop();
         self.on.pop();
-        buf.writeln("}");
+        buf.writeln(&"}");
     }
 
     fn visit_if(
         &mut self,
-        buf: &mut Buffer,
+        buf: &mut String,
         (pws, cond, block): &'a ((Ws, Ws), syn::Expr, Vec<Node>),
         ifs: &'a [(Ws, syn::Expr, Vec<Node<'a>>)],
         els: &'a Option<(Ws, Vec<Node<'a>>)>,
     ) {
+        validator::ifs(cond);
+
         self.handle_ws(&pws.0);
         self.write_buf_writable(buf);
 
         self.scp.push(vec![]);
         self.visit_expr(cond);
-        buf.writeln(&format!(
+        writeln!(
+            buf,
             "if {} {{",
             mem::replace(&mut self.buf_t, String::new())
-        ));
+        )
+        .unwrap();
 
         self.handle(block, buf);
         self.scp.pop();
 
         for (ws, cond, block) in ifs {
+            validator::ifs(cond);
+
             self.handle_ws(&ws);
             self.write_buf_writable(buf);
 
             self.scp.push(vec![]);
             self.visit_expr(cond);
-            buf.writeln(&format!(
+            writeln!(
+                buf,
                 "}} else if {} {{",
                 mem::replace(&mut self.buf_t, String::new())
-            ));
+            )
+            .unwrap();
 
             self.handle(block, buf);
             self.scp.pop();
@@ -379,7 +425,7 @@ impl<'a> Generator<'a> {
             self.handle_ws(ws);
             self.write_buf_writable(buf);
 
-            buf.writeln("} else {");
+            buf.writeln(&"} else {");
 
             self.scp.push(vec![]);
             self.handle(els, buf);
@@ -388,76 +434,41 @@ impl<'a> Generator<'a> {
 
         self.handle_ws(&pws.1);
         self.write_buf_writable(buf);
-        buf.writeln("}");
+        buf.writeln(&"}");
     }
 
-    fn visit_partial(&mut self, buf: &mut Buffer, ws: &Ws, path: &str) {
-        let mut p = self.on_path.clone();
-        p.pop();
-        p.push(append_extension(&self.s.path, path));
+    fn visit_partial(&mut self, buf: &mut String, ws: &Ws, path: &str, exprs: &'a [syn::Expr]) {
+        let p = self.c.resolve_partial(&self.on_path, path);
         let nodes = self.ctx.get(&p).unwrap();
 
         let p = mem::replace(&mut self.on_path, p);
 
         self.flush_ws(ws);
-        self.scp.push(vec![]);
-        self.handle(nodes, buf);
-        self.scp.pop();
+
+        if exprs.is_empty() {
+            self.scp.push(vec![]);
+            self.handle(nodes, buf);
+            self.scp.pop();
+        } else if exprs.len() == 1 {
+            // TODO:
+            let expr = &exprs[0];
+            validator::scope(expr);
+
+            self.visit_expr(expr);
+            let parent = mem::replace(
+                &mut self.scp,
+                vec![vec![mem::replace(&mut self.buf_t, String::new())]],
+            );
+            self.handle(nodes, buf);
+            self.scp = parent;
+        }
+
         self.prepare_ws(ws);
 
         self.on_path = p;
     }
 
-    pub(self) fn write_single_path(&mut self, ident: &str) {
-        macro_rules! wrap_and_write {
-            ($($t:tt)+) => {{
-                self.wrapped = true;
-                return write!(self.buf_t, $($t)+).unwrap();
-            }};
-        }
-
-        if ident == "self" {
-            // TODO: partial context
-            debug_assert!(!self.scp.is_empty() && !self.scp[0].is_empty());
-            write!(self.buf_t, "{}", self.scp[0][0]).unwrap();
-        } else if self.scp.iter().all(|v| v.iter().all(|e| ident.ne(e))) {
-            if self.on.is_empty() {
-                write!(self.buf_t, "{}.{}", self.scp[0][0], ident).unwrap()
-            } else {
-                if let Some(j) = self.on.iter().rev().find_map(|x| match x {
-                    On::Each(j) => Some(j),
-                    _ => None,
-                }) {
-                    match ident {
-                        "index0" => wrap_and_write!("{}", self.scp[*j][1]),
-                        "index" => wrap_and_write!("({} + 1)", self.scp[*j][1]),
-                        "first" => wrap_and_write!("({} == 0)", self.scp[*j][1]),
-                        "last" => wrap_and_write!(
-                            "(({}).len() == ({} + 1))",
-                            self.scp[*j][0],
-                            self.scp[*j][1]
-                        ),
-                        "key" => return write!(self.buf_t, "{}", self.scp[*j][0]).unwrap(),
-                        _ => (),
-                    }
-                }
-
-                match self.on.last() {
-                    // self
-                    None => write!(self.buf_t, "{}.{}", self.scp[0][0], ident).unwrap(),
-                    Some(On::Each(j)) | Some(On::With(j)) => {
-                        debug_assert!(self.scp.get(*j).is_some() && !self.scp[*j].is_empty());
-                        return write!(self.buf_t, "{}.{}", self.scp[*j][0], ident).unwrap();
-                    }
-                }
-            }
-        } else {
-            write!(self.buf_t, "{}", ident).unwrap();
-        }
-    }
-
-    // Write expression buffer and empty
-    fn write_buf_writable(&mut self, buf: &mut Buffer) {
+    fn write_buf_writable(&mut self, buf: &mut String) {
         if self.buf_w.is_empty() {
             return;
         }
@@ -472,7 +483,7 @@ impl<'a> Generator<'a> {
                     buf_lit.write_str(s).unwrap();
                 };
             }
-            buf.writeln(&format!("_fmt.write_str({:#?})?;", &buf_lit));
+            writeln!(buf, "_fmt.write_str({:#?})?;", &buf_lit).unwrap();
             return;
         }
 
@@ -481,30 +492,38 @@ impl<'a> Generator<'a> {
                 Writable::Lit(s) => buf_lit.write_str(s).unwrap(),
                 Writable::Expr(s, wrapped) => {
                     if !buf_lit.is_empty() {
-                        buf.writeln(&format!(
+                        writeln!(
+                            buf,
                             "_fmt.write_str({:#?})?;",
                             &mem::replace(&mut buf_lit, String::new())
-                        ));
+                        )
+                        .unwrap();
                     }
 
-                    buf.writeln(&format!("({}).fmt(_fmt)?;", {
-                        use self::EscapeMode::*;
-                        match (wrapped, &self.s.escaping) {
-                            (true, &Html) | (true, &None) | (false, &None) => s,
-                            (false, &Html) => format!("::wearte::MarkupAsStr::from(&{})", s),
-                        }
-                    }));
+                    buf.push('(');
+                    if wrapped || self.s.wrapped {
+                        buf.write(&s);
+                    } else {
+                        // wrap
+                        write!(buf, "::wearte::MarkupAsStr::from(&{})", s).unwrap();
+                    }
+                    buf.writeln(&").fmt(_fmt)?;");
                 }
             }
         }
 
         if !buf_lit.is_empty() {
-            buf.writeln(&format!("_fmt.write_str({:#?})?;", buf_lit));
+            writeln!(buf, "_fmt.write_str({:#?})?;", buf_lit).unwrap();
         }
     }
 
     /* Helper methods for dealing with whitespace nodes */
+    fn skip_ws(&mut self) {
+        self.next_ws = None;
+        self.skip_ws = true;
+    }
 
+    // Based on https://github.com/djc/askama
     // Combines `flush_ws()` and `prepare_ws()` to handle both trailing whitespace from the
     // preceding literal and leading whitespace from the succeeding literal.
     fn handle_ws(&mut self, ws: &Ws) {
@@ -530,10 +549,5 @@ impl<'a> Generator<'a> {
     // next literal.
     fn prepare_ws(&mut self, ws: &Ws) {
         self.skip_ws = ws.1;
-    }
-
-    fn skip_ws(&mut self) {
-        self.next_ws = None;
-        self.skip_ws = true;
     }
 }

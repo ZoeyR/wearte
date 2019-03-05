@@ -3,44 +3,44 @@ use syn::visit::Visit;
 
 use std::{mem, path::PathBuf};
 
-use super::{Context, Struct};
+use wearte_config::Config;
 
-use crate::{
-    append_extension,
-    parser::{Helper, Node},
-};
+use super::Context;
 
-pub(super) fn find_loop_var(s: &Struct, ctx: Context, path: PathBuf, nodes: &[Node]) -> bool {
-    FindEach::new(s, ctx, path).find(nodes)
+use crate::generator::visits::is_super;
+use crate::parser::{Helper, Node};
+
+pub(super) fn find_loop_var(c: &Config, ctx: Context, path: PathBuf, nodes: &[Node]) -> bool {
+    FindEach::new(c, ctx, path).find(nodes)
 }
 
-// Find {{ index }} {{ index1 }} {{ first }} {{ last }} {{ _index_[0-9] }}
+// Find {{ index }} {{ index0 }} {{ first }} {{ last }} {{ _index_[0-9] }}
 struct FindEach<'a> {
     loop_var: bool,
-    s: &'a Struct<'a>,
+    c: &'a Config<'a>,
     ctx: Context<'a>,
     on_path: PathBuf,
+    on_: usize,
 }
 
 impl<'a> FindEach<'a> {
-    fn new<'n>(s: &'n Struct<'n>, ctx: Context<'n>, on_path: PathBuf) -> FindEach<'n> {
+    fn new<'n>(c: &'n Config<'n>, ctx: Context<'n>, on_path: PathBuf) -> FindEach<'n> {
         FindEach {
-            s,
+            c,
             ctx,
             on_path,
             loop_var: false,
+            on_: 0,
         }
     }
 
     pub fn find(&mut self, nodes: &'a [Node]) -> bool {
         for n in nodes {
             match n {
-                Node::Let(expr) => self.visit_stmt(expr),
+                Node::Local(expr) => self.visit_stmt(expr),
                 Node::Expr(_, expr) | Node::Safe(_, expr) => self.visit_expr(expr),
                 Node::Helper(h) => match h {
                     Helper::If((_, first, block), else_if, els) => {
-                        // TODO: super deep
-                        // TODO: super or only when loop
                         self.visit_expr(first);
                         if self.loop_var {
                             break;
@@ -52,6 +52,10 @@ impl<'a> FindEach<'a> {
                             }
 
                             self.visit_expr(e);
+                            if self.loop_var {
+                                break;
+                            }
+
                             self.find(b);
                         }
                         if self.loop_var {
@@ -63,14 +67,33 @@ impl<'a> FindEach<'a> {
                     }
                     Helper::With(_, e, b) => {
                         self.visit_expr(e);
+                        if self.loop_var {
+                            break;
+                        }
+                        self.on_ += 1;
                         self.find(b);
+                        self.on_ -= 1;
                     }
-                    _ => (),
+                    Helper::Unless(_, expr, block) => {
+                        self.visit_expr(expr);
+                        if self.loop_var {
+                            break;
+                        }
+                        self.find(block);
+                    }
+                    Helper::Each(_, expr, block) => {
+                        self.visit_expr(expr);
+                        if self.loop_var {
+                            break;
+                        }
+                        self.on_ += 1;
+                        self.find(block);
+                        self.on_ -= 1;
+                    }
+                    Helper::Defined(..) => unimplemented!(),
                 },
-                Node::Partial(_, path) => {
-                    let mut p = self.on_path.clone();
-                    p.pop();
-                    p.push(append_extension(&self.s.path, path));
+                Node::Partial(_, path, _) => {
+                    let p = self.c.resolve_partial(&self.on_path, path);
                     let nodes = self.ctx.get(&p).unwrap();
 
                     let parent = mem::replace(&mut self.on_path, p);
@@ -79,7 +102,7 @@ impl<'a> FindEach<'a> {
 
                     self.on_path = parent;
                 }
-                Node::Lit(..) | Node::Comment(_) => (),
+                Node::Raw(..) | Node::Lit(..) | Node::Comment(_) => (),
             }
             if self.loop_var {
                 break;
@@ -91,10 +114,9 @@ impl<'a> FindEach<'a> {
 
 impl<'a> Visit<'a> for FindEach<'a> {
     fn visit_expr_path(&mut self, i: &'a syn::ExprPath) {
-        if !self.loop_var {
-            if i.path.segments.len() == 1 {
-                let ident: &str = &i.path.segments[0].ident.to_string();
-                match ident {
+        macro_rules! search {
+            ($ident:expr) => {
+                match $ident.as_ref() {
                     "index" | "index0" | "first" | "last" => self.loop_var = true,
                     ident => {
                         let ident = ident.as_bytes();
@@ -106,9 +128,19 @@ impl<'a> Visit<'a> for FindEach<'a> {
                         }
                     }
                 }
+            };
+        }
+
+        if !self.loop_var {
+            if i.path.segments.len() == 1 {
+                search!(i.path.segments[0].ident.to_string());
+            } else if 0 < self.on_ {
+                if let Some((j, ident)) = is_super(&i.path.segments) {
+                    if j == self.on_ {
+                        search!(ident);
+                    }
+                }
             }
         }
     }
 }
-
-// TODO: coverage

@@ -12,13 +12,14 @@ pub(crate) type Ws = (bool, bool);
 
 #[derive(Debug, PartialEq)]
 pub(crate) enum Node<'a> {
-    Let(Stmt),
-    Lit(&'a str, &'a str, &'a str),
     Comment(&'a str),
-    Safe(Ws, Expr),
     Expr(Ws, Expr),
     Helper(Helper<'a>),
-    Partial(Ws, &'a str),
+    Lit(&'a str, &'a str, &'a str),
+    Local(Stmt),
+    Partial(Ws, &'a str, Vec<Expr>),
+    Raw((Ws, Ws), &'a str, &'a str, &'a str),
+    Safe(Ws, Expr),
 }
 
 #[derive(Debug, PartialEq)]
@@ -37,10 +38,13 @@ pub(crate) enum Helper<'a> {
 
 const ERR_ARGS: nom::ErrorKind = nom::ErrorKind::Custom(0);
 const ERR_EXPR: nom::ErrorKind = nom::ErrorKind::Custom(1);
-const ERR_HELPER: nom::ErrorKind = nom::ErrorKind::Custom(2);
-const ERR_IDENT: nom::ErrorKind = nom::ErrorKind::Custom(3);
-const ERR_IF: nom::ErrorKind = nom::ErrorKind::Custom(4);
-const ERR_LOCAL: nom::ErrorKind = nom::ErrorKind::Custom(5);
+const ERR_EXPR_LIST: nom::ErrorKind = nom::ErrorKind::Custom(2);
+const ERR_HELPER: nom::ErrorKind = nom::ErrorKind::Custom(3);
+const ERR_IDENT: nom::ErrorKind = nom::ErrorKind::Custom(4);
+const ERR_IF: nom::ErrorKind = nom::ErrorKind::Custom(5);
+const ERR_LOCAL: nom::ErrorKind = nom::ErrorKind::Custom(6);
+const ERR_PARTIAL: nom::ErrorKind = nom::ErrorKind::Custom(7);
+const ERR_RAW: nom::ErrorKind = nom::ErrorKind::Custom(8);
 
 pub(crate) fn parse(src: &str) -> Vec<Node> {
     match eat(Input(src.as_bytes())) {
@@ -59,11 +63,13 @@ pub(crate) fn parse(src: &str) -> Vec<Node> {
                     "problems parsing wrapped or unwrapped expression: {:?}",
                     err
                 ),
+                ERR_EXPR_LIST => panic!("problems parsing partial arguments: {:?}", err),
                 ERR_ARGS => panic!("problems parsing arguments: {:?}", err),
                 ERR_HELPER => panic!("problems parsing helper: {:?}", err),
                 ERR_IDENT => panic!("problems parsing identification variable: {:?}", err),
                 ERR_IF => panic!("problems parsing helper IF: {:?}", err),
                 ERR_LOCAL => panic!("problems parsing LET block: {:?}", err),
+                ERR_PARTIAL => panic!("problems parsing partial: {:?}", err),
                 _ => panic!("problems parsing template source: {:?}", err),
             }
         }
@@ -123,19 +129,62 @@ macro_rules! make_eater {
 
             loop {
                 if let Some(j) = memchr(b'{', &i[at..]) {
-                    let n = &i[at + j + 1..];
-                    at = if 1 < n.len() {
-                        if n[0] == b'{' {
-                            match n[1] {
-                                b'{' => try_eat!(nodes, i, at, j, safe(Input(&i[at + j + 3..]))),
-                                b'!' => try_eat!(nodes, i, at, j, comment(Input(&i[at + j + 3..]))),
-                                b'#' => try_eat!(nodes, i, at, j, helper(Input(&i[at + j + 3..]))),
-                                b'>' => try_eat!(nodes, i, at, j, partial(Input(&i[at + j + 3..]))),
-                                b'/' => kill!(nodes, &i[at + j + 3..], i[..at + j]),
-                                _ => {
-                                    $callback!(nodes, i, at, j);
-                                    try_eat!(nodes, i, at, j, expr(Input(&i[at + j + 2..])))
+                    macro_rules! _switch {
+                        ($n:expr, $t:expr, $ws:expr) => {
+                            match $n {
+                                b'{' => try_eat!(
+                                    nodes,
+                                    i,
+                                    at,
+                                    j,
+                                    safe(Input(&i[at + j + 3 + $t..]), $ws)
+                                ),
+                                b'!' => {
+                                    try_eat!(nodes, i, at, j, comment(Input(&i[at + j + 3 + $t..])))
                                 }
+                                b'#' => try_eat!(
+                                    nodes,
+                                    i,
+                                    at,
+                                    j,
+                                    helper(Input(&i[at + j + 3 + $t..]), $ws)
+                                ),
+                                b'>' => try_eat!(
+                                    nodes,
+                                    i,
+                                    at,
+                                    j,
+                                    partial(Input(&i[at + j + 3 + $t..]), $ws)
+                                ),
+                                b'R' => try_eat!(
+                                    nodes,
+                                    i,
+                                    at,
+                                    j,
+                                    raw(Input(&i[at + j + 3 + $t..]), $ws)
+                                ),
+                                b'/' => kill!(nodes, &i[at + j + 2..], i[..at + j]),
+                                _ => {
+                                    $callback!(nodes, i, at, j, $t);
+                                    try_eat!(
+                                        nodes,
+                                        i,
+                                        at,
+                                        j,
+                                        expr(Input(&i[at + j + 2 + $t..]), $ws)
+                                    )
+                                }
+                            }
+                        };
+                    }
+
+                    let n = &i[at + j + 1..];
+                    at = if 2 < n.len() {
+                        if n[0] == b'{' {
+                            if n[1] == b'~' {
+                                _switch!(n[2], 1, true)
+                            } else {
+                                _switch!(n[1], 0, false)
                             }
                         } else {
                             // next
@@ -162,11 +211,8 @@ static IF: &[u8] = b"if";
 static ELSE: &[u8] = b"else";
 
 macro_rules! is_else {
-    ($n:ident, $i:ident, $at:ident, $j:ident) => {
-        if let Ok((c, _)) = do_parse!(
-            Input(&$i[$at + $j + 2..]),
-            opt!(tag!("-")) >> take_while!(ws) >> (())
-        ) {
+    ($n:ident, $i:ident, $at:ident, $j:ident, $t:expr) => {
+        if let Ok((c, _)) = take_while!(Input(&$i[$at + $j + 2 + $t..]), ws) {
             if c.0.starts_with(ELSE) {
                 kill!($n, &$i[$at + $j + 2..], $i[..$at + $j]);
             }
@@ -190,7 +236,7 @@ macro_rules! try_eat_local {
     ($c:ident, $s:ident) => {
         if $s.0.starts_with(LET) {
             if let Ok(e) = eat_local($s) {
-                return Ok(($c, Node::Let(e)));
+                return Ok(($c, Node::Local(e)));
             }
         }
     };
@@ -202,26 +248,37 @@ macro_rules! map_failure {
     };
 }
 
-named!(partial<Input, Node>, do_parse!(
-    lws: opt!(tag!("-"))
-        >> take_while!(ws)
-        >> ident: path
-        >> take_while!(ws)
-        >> rws: opt!(tag!("-"))
-        >> tag!("}}")
-        >> (Node::Partial((lws.is_some(), rws.is_some()), ident))
-));
+fn partial(i: Input, lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
+    let (i, ident) = do_parse!(
+        i,
+        take_while!(ws) >> ident: path >> take_while!(ws) >> (ident)
+    )?;
 
-fn helper(i: Input) -> Result<(Input, Node), nom::Err<Input>> {
+    let (i, scope) = if let Ok((i, scope)) = args_list(i) {
+        (i, scope)
+    } else {
+        (i, vec![])
+    };
+    let (_, rws) = map!(i, take!(1), |x| x.0.starts_with(b"~"))?;
+    let (i, _) = map_failure!(
+        i,
+        ERR_PARTIAL,
+        alt!(i, tag!("}}") | terminated!(take!(1), tag!("}}")))
+    )?;
+
+    Ok((i, Node::Partial((lws, rws), ident, scope)))
+}
+
+fn helper(i: Input, a_lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
     let (i, (above_ws, ident, args)) = do_parse!(
         i,
-        lws: opt!(tag!("-"))
-            >> take_while!(ws)
+        take_while!(ws)
             >> ident: identifier
             >> args: arguments
-            >> rws: map!(take!(1), |x| x.0.starts_with(b"-"))
-            >> alt!(tag!("}}") | terminated!(take!(1), tag!("}}")))
-            >> (((lws.is_some(), rws), ident, args))
+            >> take_while!(ws)
+            >> rws: opt!(tag!("~"))
+            >> tag!("}}")
+            >> (((a_lws, rws.is_some()), ident, args))
     )?;
 
     if ident.eq("if") {
@@ -234,11 +291,12 @@ fn helper(i: Input) -> Result<(Input, Node), nom::Err<Input>> {
         do_parse!(
             i,
             block: eat
-                >> lws: opt!(tag!("-"))
+                >> lws: opt!(tag!("~"))
+                >> tag!("/")
                 >> take_while!(ws)
                 >> c_ident: identifier
                 >> take_while!(ws)
-                >> rws: opt!(tag!("-"))
+                >> rws: opt!(tag!("~"))
                 >> tag!("}}")
                 >> (((lws.is_some(), rws.is_some()), block, c_ident))
         )
@@ -263,40 +321,40 @@ fn helper(i: Input) -> Result<(Input, Node), nom::Err<Input>> {
 
 #[inline]
 fn if_else(abode_ws: Ws, i: Input, args: Expr) -> Result<(Input, Node), nom::Err<Input>> {
-    let (i, first) = eat_if(i)?;
-
     let mut nodes = vec![];
     let mut tail = None;
-    let (mut i, mut lws) = do_parse!(
-        i,
-        lws: opt!(tag!("-")) >> take_while!(ws) >> (lws.is_some())
-    )?;
+
+    let (mut i, first) = eat_if(i)?;
 
     loop {
-        if i.0.starts_with(ELSE) {
-            if let Ok((j, _)) = terminated!(Input(&i[4..]), take_while!(ws), tag!(IF)) {
+        if let Ok((c, lws)) = do_parse!(
+            i,
+            lws: opt!(tag!("~")) >> take_while!(ws) >> tag!(ELSE) >> (lws.is_some())
+        ) {
+            if let Ok((c, _)) = terminated!(c, take_while!(ws), tag!(IF)) {
                 let (c, b) = map_failure!(
-                    j,
+                    c,
                     ERR_IF,
                     do_parse!(
-                        j,
-                        args: arguments
-                            >> rws: map!(take!(1), |x| x.0.starts_with(b"-"))
+                        c,
+                        take_while!(ws)
+                            >> args: arguments
+                            >> rws: opt!(tag!("~"))
                             >> tag!("}}")
                             >> block: eat_if
-                            >> (((lws, rws), args, block))
+                            >> (((lws, rws.is_some()), args, block))
                     )
                 )?;
                 nodes.push(b);
                 i = c;
             } else {
                 let (c, b) = map_failure!(
-                    i,
+                    c,
                     ERR_IF,
                     do_parse!(
-                        Input(&i[4..]),
+                        c,
                         take_while!(ws)
-                            >> rws: opt!(tag!("-"))
+                            >> rws: opt!(tag!("~"))
                             >> tag!("}}")
                             >> block: eat
                             >> (((lws, rws.is_some()), block))
@@ -305,13 +363,16 @@ fn if_else(abode_ws: Ws, i: Input, args: Expr) -> Result<(Input, Node), nom::Err
                 tail = Some(b);
                 i = c;
             }
-        } else if i.0.starts_with(IF) {
+        } else if let Ok((c, lws)) = do_parse!(
+            i,
+            lws: opt!(tag!("~")) >> tag!("/") >> take_while!(ws) >> tag!(IF) >> (lws.is_some())
+        ) {
             let (c, below_ws) = map_failure!(
-                i,
+                c,
                 ERR_IF,
                 do_parse!(
-                    Input(&i[2..]),
-                    take_while!(ws) >> rws: opt!(tag!("-")) >> tag!("}}") >> ((lws, rws.is_some()))
+                    c,
+                    take_while!(ws) >> rws: opt!(tag!("~")) >> tag!("}}") >> ((lws, rws.is_some()))
                 )
             )?;
             break Ok((
@@ -321,89 +382,174 @@ fn if_else(abode_ws: Ws, i: Input, args: Expr) -> Result<(Input, Node), nom::Err
         } else {
             break Err(nom::Err::Failure(error_position!(i, ERR_IF)));
         }
-
-        let c = do_parse!(
-            i,
-            lws: opt!(tag!("-")) >> take_while!(ws) >> (lws.is_some())
-        )?;
-        i = c.0;
-        lws = c.1;
     }
 }
 
-fn arguments(i: Input) -> Result<(Input, Expr), nom::Err<Input>> {
+fn raw(i: Input, a_lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
+    let (i, a_rws) = do_parse!(
+        i,
+        take_while!(ws) >> rws: opt!(tag!("~")) >> tag!("}}") >> (rws.is_some())
+    )?;
+
     let mut at = 0;
-    loop {
-        if let Some(j) = memchr(b'}', &i[at..]) {
+    let (c, (i, b_ws)) = loop {
+        if let Some(j) = memchr(b'{', &i[at..]) {
             let n = &i[at + j + 1..];
-            if n.is_empty() {
-                break Err(nom::Err::Error(error_position!(i, ERR_ARGS)));
-            } else {
-                if n[0] == b'}' {
-                    break if 0 < at + j {
-                        if i[at + j - 1] == b'-' {
-                            eat_expr(Input(&i[..at + j - 1])).map(|e| (Input(&i[at + j - 1..]), e))
-                        } else {
-                            eat_expr(Input(&i[..at + j])).map(|e| (Input(&i[at + j - 1..]), e))
-                        }
-                    } else {
-                        Err(nom::Err::Failure(error_position!(i, ERR_ARGS)))
-                    };
+            at = if 0 < n.len() && n[0] == b'{' {
+                if let Ok((c, ws)) = do_parse!(
+                    Input(&n[1..]),
+                    lws: opt!(tag!("~"))
+                        >> tag!("/R")
+                        >> take_while!(ws)
+                        >> rws: opt!(tag!("~"))
+                        >> tag!("}}")
+                        >> ((lws.is_some(), rws.is_some()))
+                ) {
+                    break (c, (Input(&i[..at + j]), ws));
                 } else {
-                    // next
-                    at += j + 2;
+                    at + j + 4
                 }
+            } else {
+                at + j + 1
             }
         } else {
-            break Err(nom::Err::Error(error_position!(i, ERR_ARGS)));
+            return Err(nom::Err::Failure(error_position!(i, ERR_RAW)));
+        }
+    };
+
+    let (l, v, r) = trim(i);
+    Ok((
+        c,
+        Node::Raw(
+            ((a_lws, a_rws), b_ws),
+            from_utf8(&l.0).unwrap(),
+            from_utf8(&v.0).unwrap(),
+            from_utf8(&r.0).unwrap(),
+        ),
+    ))
+}
+
+macro_rules! make_argument {
+    ($name:ident, $fun:ident, $ret:ty) => {
+        fn $name(i: Input) -> $ret {
+            let mut at = 0;
+            loop {
+                if let Some(j) = memchr(b'}', &i[at..]) {
+                    let n = &i[at + j + 1..];
+                    if n.is_empty() {
+                        break Err(nom::Err::Error(error_position!(i, ERR_ARGS)));
+                    } else {
+                        if n[0] == b'}' {
+                            break if 0 < at + j {
+                                if i[at + j - 1] == b'~' {
+                                    $fun(Input(&i[..at + j - 1]))
+                                        .map(|e| (Input(&i[at + j - 1..]), e))
+                                } else {
+                                    $fun(Input(&i[..at + j])).map(|e| (Input(&i[at + j..]), e))
+                                }
+                            } else {
+                                Err(nom::Err::Failure(error_position!(i, ERR_ARGS)))
+                            };
+                        } else {
+                            // next
+                            at += j + 2;
+                        }
+                    }
+                } else {
+                    break Err(nom::Err::Error(error_position!(i, ERR_ARGS)));
+                }
+            }
+        }
+    };
+}
+
+make_argument!(arguments, eat_expr, Result<(Input, Expr), nom::Err<Input>>);
+
+fn eat_expr_list(mut i: Input) -> Result<Vec<Expr>, nom::Err<Input>> {
+    let mut exprs = vec![];
+    loop {
+        let mut at = 0;
+        let end = 'l: loop {
+            if i.0.len() < at + 1 {
+                break 'l true;
+            }
+            if i[at] == b',' {
+                exprs.push(map_failure!(
+                    Input(&i[..at]),
+                    ERR_EXPR_LIST,
+                    eat_expr(Input(&i[..at]))
+                )?);
+                i = take_while!(Input(&i[at + 1..]), ws)?.0;
+                ;
+                break 'l false;
+            }
+            at += 1;
+        };
+        if end {
+            exprs.push(map_failure!(i, ERR_EXPR_LIST, eat_expr(Input(&i[..at])))?);
+            break;
+        } else if i.0.is_empty() {
+            break;
         }
     }
+
+    Ok(exprs)
 }
 
-macro_rules! make_expr {
-    ($i:ident, $sw:expr, $d:expr, $ret:ident) => {{
-        let (mut at, lws) = if $i.0.starts_with(b"-") {
-            (1, true)
-        } else {
-            (0, false)
-        };
+make_argument!(
+    args_list,
+    eat_expr_list,
+    Result<(Input, Vec<Expr>), nom::Err<Input>>
+);
 
-        let (c, rws, s) = loop {
-            if let Some(j) = memchr(b'}', &$i[at..]) {
-                let n = &$i[at + j + 1..];
-                if n.starts_with($sw) {
-                    if 0 < at + j {
-                        let init = if lws { 1 } else { 0 };
-                        break if $i[at + j - 1] == b'-' {
-                            (
-                                Input(&$i[at + j + $d..]),
-                                true,
-                                Input(&$i[init..at + j - 1]),
-                            )
-                        } else {
-                            (Input(&$i[at + j + $d..]), false, Input(&$i[init..at + j]))
-                        };
-                    }
-                }
+fn safe(i: Input, lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
+    let mut at = 0;
 
-                at += j + 1;
-            } else {
-                return Err(nom::Err::Error(error_position!($i, ERR_ARGS)));
+    let (c, rws, s) = loop {
+        if let Some(j) = memchr(b'}', &i[at..]) {
+            if let Ok((c, rws)) = do_parse!(
+                Input(&i[at + j + 1..]),
+                rws: opt!(tag!("~")) >> tag!("}}") >> (rws.is_some())
+            ) {
+                break (c, rws, Input(&i[..at + j]));
             }
-        };
 
-        let (_, s, _) = trim(s);
-        try_eat_local!(c, s);
-        eat_expr(s).map(|e| (c, Node::$ret((lws, rws), e)))
-    }};
+            at += j + 1;
+        } else {
+            return Err(nom::Err::Error(error_position!(i, ERR_ARGS)));
+        }
+    };
+
+    let (_, s, _) = trim(s);
+    try_eat_local!(c, s);
+    eat_expr(s).map(|e| (c, Node::Safe((lws, rws), e)))
 }
 
-fn safe(i: Input) -> Result<(Input, Node), nom::Err<Input>> {
-    make_expr!(i, b"}}", 3, Safe)
-}
+fn expr(i: Input, lws: bool) -> Result<(Input, Node), nom::Err<Input>> {
+    let mut at = 0;
 
-fn expr(i: Input) -> Result<(Input, Node), nom::Err<Input>> {
-    make_expr!(i, b"}", 2, Expr)
+    let (c, rws, s) = loop {
+        if let Some(j) = memchr(b'}', &i[at..]) {
+            let n = &i[at + j + 1..];
+            if n.starts_with(b"}") {
+                if 0 < at + j {
+                    break if i[at + j - 1] == b'~' {
+                        (Input(&i[at + j + 2..]), true, Input(&i[..at + j - 1]))
+                    } else {
+                        (Input(&i[at + j + 2..]), false, Input(&i[..at + j]))
+                    };
+                }
+            }
+
+            at += j + 1;
+        } else {
+            return Err(nom::Err::Error(error_position!(i, ERR_ARGS)));
+        }
+    };
+
+    let (_, s, _) = trim(s);
+    try_eat_local!(c, s);
+    eat_expr(s).map(|e| (c, Node::Expr((lws, rws), e)))
 }
 
 #[inline]
@@ -427,14 +573,14 @@ fn identifier(i: Input) -> Result<(Input, &str), nom::Err<Input>> {
 
     for (j, c) in i[1..].iter().enumerate() {
         if !nom::is_alphanumeric(*c) && *c != b'_' {
-            return Ok((Input(&i[j + 1..]), from_utf8(&i[..j + 1]).unwrap()));
+            return Ok((Input(&i[j + 1..]), safe_utf8(&i[..j + 1])));
         }
     }
 
-    Ok((Input(&i[1..]), str::from_utf8(&i[..1]).unwrap()))
+    Ok((Input(&i[1..]), safe_utf8(&i[..1])))
 }
 
-named!(path<Input, &str>, map!(take_while1!(is_path), |x| str::from_utf8(&x).unwrap()));
+named!(path<Input, &str>, map!(take_while1!(is_path), |x| safe_utf8(&x)));
 
 #[inline]
 fn is_path(n: u8) -> bool {
@@ -459,6 +605,11 @@ fn trim(i: Input) -> (Input, Input, Input) {
     }
 }
 
+/// Use when previous checks
+fn safe_utf8(s: &[u8]) -> &str {
+    unsafe { ::std::str::from_utf8_unchecked(s) }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -469,8 +620,6 @@ mod tests {
     #[test]
     fn test_empty() {
         let src = r#""#;
-        assert_eq!(parse(src), vec![]);
-        let src = r#"{{/"#;
         assert_eq!(parse(src), vec![]);
     }
 
@@ -630,7 +779,7 @@ mod tests {
             eat_if(src).unwrap(),
             (
                 Input(b"else if cond}}{{else}}"),
-                vec![Node::Let(parse_str::<Stmt>("let a = foo;").unwrap())]
+                vec![Node::Local(parse_str::<Stmt>("let a = foo;").unwrap())]
             )
         );
     }
@@ -639,7 +788,7 @@ mod tests {
     fn test_helpers() {
         let src = Input(b"each name }}{{first}} {{last}}{{/each}}");
         assert_eq!(
-            helper(src).unwrap(),
+            helper(src, false).unwrap(),
             (
                 Input(&[]),
                 Node::Helper(Helper::Each(
@@ -739,41 +888,41 @@ mod tests {
 
     #[test]
     fn test_ws_expr() {
-        let src = "{{-foo-}}";
+        let src = "{{~foo~}}";
         assert_eq!(
             parse(src),
             vec![Node::Expr((true, true), parse_str::<Expr>("foo").unwrap())]
         );
-        let src = "{{- foo-}}";
+        let src = "{{~ foo~}}";
         assert_eq!(
             parse(src),
             vec![Node::Expr((true, true), parse_str::<Expr>("foo").unwrap())]
         );
-        let src = "{{- foo}}";
+        let src = "{{~ foo}}";
         assert_eq!(
             parse(src),
             vec![Node::Expr((true, false), parse_str::<Expr>("foo").unwrap())]
         );
-        let src = "{{foo    -}}";
+        let src = "{{foo    ~}}";
         assert_eq!(
             parse(src),
             vec![Node::Expr((false, true), parse_str::<Expr>("foo").unwrap())]
         );
-        let src = "{{{-foo-}}}";
+        let src = "{{~{foo }~}}";
         assert_eq!(
             parse(src),
             vec![Node::Safe((true, true), parse_str::<Expr>("foo").unwrap())]
         );
-        let src = "{{{-foo -}}}";
+        let src = "{{{foo }~}}";
         assert_eq!(
             parse(src),
-            vec![Node::Safe((true, true), parse_str::<Expr>("foo").unwrap())]
+            vec![Node::Safe((false, true), parse_str::<Expr>("foo").unwrap())]
         );
     }
 
     #[test]
     fn test_ws_each() {
-        let src = "{{#-each bar-}}{{/-each-}}";
+        let src = "{{~#each bar~}}{{~/each~}}";
         assert_eq!(
             parse(src),
             vec![Node::Helper(Helper::Each(
@@ -786,7 +935,7 @@ mod tests {
 
     #[test]
     fn test_ws_if() {
-        let src = "{{#-if bar-}}{{/-if-}}";
+        let src = "{{~#if bar~}}{{~/if~}}";
         assert_eq!(
             parse(src),
             vec![Node::Helper(Helper::If(
@@ -803,7 +952,7 @@ mod tests {
 
     #[test]
     fn test_ws_if_else() {
-        let src = "{{#-if bar-}}{{-else-}}{{/-if-}}";
+        let src = "{{~#if bar~}}{{~else~}}{{~/if~}}";
         assert_eq!(
             parse(src),
             vec![Node::Helper(Helper::If(
@@ -820,7 +969,7 @@ mod tests {
 
     #[test]
     fn test_ws_if_else_if() {
-        let src = "{{#-if bar-}}{{-else if bar-}}{{-else-}}{{/-if-}}";
+        let src = "{{~#if bar~}}{{~else if bar~}}{{~else~}}{{~/if~}}";
         assert_eq!(
             parse(src),
             vec![Node::Helper(Helper::If(
@@ -836,8 +985,82 @@ mod tests {
     }
 
     #[test]
+    fn test_ws_raw() {
+        let src = "{{~R~}}{{#some }}{{/some}}{{~/R ~}}";
+        assert_eq!(
+            parse(src),
+            vec![Node::Raw(
+                ((true, true), (true, true)),
+                "",
+                "{{#some }}{{/some}}",
+                ""
+            )]
+        );
+        let src = "{{R  ~}}{{#some }}{{/some}}{{/R ~}}";
+        assert_eq!(
+            parse(src),
+            vec![Node::Raw(
+                ((false, true), (false, true)),
+                "",
+                "{{#some }}{{/some}}",
+                ""
+            )]
+        );
+    }
+
+    #[test]
+    fn test_partial_ws() {
+        let src = "{{~> partial ~}}";
+        assert_eq!(
+            parse(src),
+            vec![Node::Partial((true, true), "partial", vec![])]
+        );
+        let src = "{{> partial scope ~}}";
+        assert_eq!(
+            parse(src),
+            vec![Node::Partial(
+                (false, true),
+                "partial",
+                vec![parse_str::<Expr>("scope").unwrap()],
+            )]
+        );
+    }
+
+    #[test]
     fn test_partial() {
         let src = "{{> partial }}";
-        assert_eq!(parse(src), vec![Node::Partial((false, false), "partial")])
+        assert_eq!(parse(src), vec![Node::Partial(WS, "partial", vec![])]);
+        let src = "{{> partial scope }}";
+        assert_eq!(
+            parse(src),
+            vec![Node::Partial(
+                WS,
+                "partial",
+                vec![parse_str::<Expr>("scope").unwrap()],
+            )]
+        );
+    }
+
+    #[test]
+    fn test_raw() {
+        let src = "{{R}}{{#some }}{{/some}}{{/R}}";
+        assert_eq!(
+            parse(src),
+            vec![Node::Raw((WS, WS), "", "{{#some }}{{/some}}", "")]
+        );
+    }
+
+    #[test]
+    fn test_expr_list() {
+        let src = Input(b"bar, foo = \"bar\"\n, fuu = 1  , goo = true,    ");
+        assert_eq!(
+            eat_expr_list(src).unwrap(),
+            vec![
+                parse_str::<Expr>("bar").unwrap(),
+                parse_str::<Expr>("foo=\"bar\"").unwrap(),
+                parse_str::<Expr>("fuu=1").unwrap(),
+                parse_str::<Expr>("goo=true").unwrap(),
+            ]
+        );
     }
 }

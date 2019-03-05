@@ -5,7 +5,7 @@ use std::path::PathBuf;
 
 use wearte_config::Config;
 
-use crate::get_source;
+use crate::generator::EWrite;
 
 pub(crate) fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &'a Config) -> Struct<'a> {
     StructBuilder::default().build(i, config)
@@ -13,45 +13,46 @@ pub(crate) fn visit_derive<'a>(i: &'a syn::DeriveInput, config: &'a Config) -> S
 
 #[derive(Debug)]
 pub(crate) struct Struct<'a> {
-    pub source: String,
+    pub src: String,
     pub path: PathBuf,
     pub print: Print,
-    pub escaping: EscapeMode,
+    pub wrapped: bool,
     ident: &'a syn::Ident,
     generics: &'a syn::Generics,
 }
 
 impl<'a> Struct<'a> {
-    pub fn implement_head(&self, t: &str) -> String {
+    pub fn implement_head(&self, t: &str, buf: &mut EWrite) {
         let (impl_generics, orig_ty_generics, where_clause) = self.generics.split_for_impl();
 
-        format!(
+        writeln!(
+            buf,
             "{} {} for {}{} {{",
             quote!(impl#impl_generics),
             t,
             self.ident,
             quote!(#orig_ty_generics #where_clause)
         )
+        .unwrap()
     }
 }
 
 struct StructBuilder {
-    source: Option<String>,
-    print: Option<String>,
-    escaping: Option<String>,
-    path: Option<String>,
+    assured: Option<bool>,
     ext: Option<String>,
-    // TODO: visit struct for wrapper resolution
+    path: Option<String>,
+    print: Option<String>,
+    src: Option<String>,
 }
 
 impl Default for StructBuilder {
     fn default() -> Self {
         StructBuilder {
-            source: None,
-            print: None,
-            escaping: None,
-            path: None,
+            assured: None,
             ext: None,
+            path: None,
+            print: None,
+            src: None,
         }
     }
 }
@@ -71,42 +72,36 @@ impl StructBuilder {
             self.visit_attribute(it)
         }
 
-        let (source, path) = match (self.source, self.ext) {
-            (Some(src), Some(ext)) => (src, PathBuf::from(format!("{}.{}", ident, ext))),
-            (None, None) => {
-                let path = config.find_template(&self.path.expect("some valid path"), None);
-                let source = get_source(path.as_path());
-                (source, path)
-            }
+        let (path, src) = match (self.src, self.ext) {
+            (Some(src), ext) => (
+                PathBuf::from(quote!(#ident).to_string())
+                    .with_extension(ext.unwrap_or(DEFAULT_EXTENSION.to_owned())),
+                src,
+            ),
+            (None, None) => config.get_template(&self.path.expect("some valid path")),
             (None, Some(_)) => panic!("'ext' attribute cannot be used with 'path' attribute"),
-            (Some(_), None) => panic!("must include 'ext' attribute when using 'source' attribute"),
         };
 
-        let escaping = self.escaping.map_or_else(
-            || {
-                if let Some(e) = path.extension() {
-                    if HTML_EXTENSIONS.contains(&e.to_str().unwrap()) {
-                        return EscapeMode::Html;
-                    }
+        let wrapped = self.assured.unwrap_or_else(|| {
+            if let Some(e) = path.extension() {
+                if HTML_EXTENSIONS.contains(&e.to_str().unwrap()) {
+                    return false;
                 }
+            }
 
-                EscapeMode::None
-            },
-            |s| s.into(),
-        );
-
+            true
+        });
         Struct {
-            source,
+            src,
             path,
             print: self.print.into(),
-            escaping,
+            wrapped,
             generics,
             ident,
         }
     }
 }
 
-// TODO: extend
 impl<'a> Visit<'a> for StructBuilder {
     fn visit_attribute(&mut self, i: &'a syn::Attribute) {
         self.visit_meta(&i.parse_meta().expect("valid meta attributes"));
@@ -120,7 +115,6 @@ impl<'a> Visit<'a> for StructBuilder {
                 self.visit_nested_meta(it)
             }
         } else {
-            // TODO: possible not panic
             panic!("not valid template attribute: {}", ident);
         }
     }
@@ -132,63 +126,46 @@ impl<'a> Visit<'a> for StructBuilder {
         match ident.to_string().as_ref() {
             "path" => {
                 if let syn::Lit::Str(ref s) = lit {
-                    if self.source.is_some() {
-                        panic!("must specify 'source' or 'path', not both");
+                    if self.src.is_some() {
+                        panic!("must specify 'src' or 'path', not both");
                     }
                     self.path = Some(s.value());
                 } else {
-                    panic!("template path must be string literal");
+                    panic!("attribute path must be string literal");
                 }
             }
-            "source" => {
+            "src" => {
                 if let syn::Lit::Str(ref s) = lit {
                     if self.path.is_some() {
-                        panic!("must specify 'source' or 'path', not both");
+                        panic!("must specify 'src' or 'path', not both");
                     }
-                    self.source = Some(s.value());
+                    self.src = Some(s.value());
                 } else {
-                    panic!("template source must be string literal");
+                    panic!("attribute src must be string literal");
                 }
             }
             "print" => {
                 if let syn::Lit::Str(ref s) = lit {
                     self.print = Some(s.value().into());
                 } else {
-                    panic!("print value must be string literal");
+                    panic!("attribute print must be string literal");
                 }
             }
-            "escape" => {
-                if let syn::Lit::Str(ref s) = lit {
-                    self.escaping = Some(s.value().into());
+            "assured" => {
+                if let syn::Lit::Bool(ref s) = lit {
+                    self.assured = Some(s.value);
                 } else {
-                    panic!("escape value must be string literal");
+                    panic!("attribute assured must be boolean literal");
                 }
             }
             "ext" => {
                 if let syn::Lit::Str(ref s) = lit {
                     self.ext = Some(s.value());
                 } else {
-                    panic!("ext value must be string literal");
+                    panic!("attribute ext must be string literal");
                 }
             }
-            attr => panic!("unsupported annotation key '{}' found", attr),
-        }
-    }
-}
-
-#[derive(PartialEq, Debug)]
-pub(crate) enum EscapeMode {
-    Html,
-    None,
-}
-
-impl From<String> for EscapeMode {
-    fn from(s: String) -> EscapeMode {
-        use self::EscapeMode::*;
-        match s.as_ref() {
-            "html" => Html,
-            "none" => None,
-            v => panic!("invalid value for escape option: {}", v),
+            attr => panic!("invalid attribute '{}'", attr),
         }
     }
 }
@@ -208,15 +185,22 @@ impl From<Option<String>> for Print {
                 "all" => Print::All,
                 "ast" => Print::Ast,
                 "code" => Print::Code,
-                "none" => Print::None,
-                v => panic!("invalid value for print option: {}", v),
+                v => panic!("invalid value for print attribute: {}", v),
             },
             None => Print::None,
         }
     }
 }
 
-static HTML_EXTENSIONS: [&str; 3] = ["html", "htm", "xml"];
+static DEFAULT_EXTENSION: &str = "html";
+static HTML_EXTENSIONS: [&str; 6] = [
+    DEFAULT_EXTENSION,
+    "htm",
+    "xml",
+    "hbs",
+    "handlebars",
+    "mustache",
+];
 static ATTRIBUTES: [&str; 2] = ["derive", "template"];
 
 #[cfg(test)]
@@ -241,15 +225,15 @@ mod test {
     fn test() {
         let src = r#"
             #[derive(Template)]
-            #[template(source = "", ext = "txt", print = "code")]
+            #[template(src = "", ext = "txt", print = "code")]
             struct Test;
         "#;
         let i = parse_str::<syn::DeriveInput>(src).unwrap();
         let config = Config::new("");
         let s = visit_derive(&i, &config);
-        assert_eq!(s.source, "");
+        assert_eq!(s.src, "");
         assert_eq!(s.path, PathBuf::from("Test.txt"));
         assert_eq!(s.print, Print::Code);
-        assert_eq!(s.escaping, EscapeMode::None);
+        assert_eq!(s.wrapped, true);
     }
 }

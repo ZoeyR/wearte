@@ -2,6 +2,7 @@ use memchr::memchr;
 
 use std::str::from_utf8;
 
+use crate::parser::raw;
 use crate::parser::{partial, Input, Node};
 
 pub(crate) fn parse_partials(src: &str) -> Vec<Node> {
@@ -26,19 +27,42 @@ pub(crate) fn parse_partials(src: &str) -> Vec<Node> {
 fn eat_partials(mut i: Input) -> Result<(Input, Vec<Node>), nom::Err<Input>> {
     let mut nodes = vec![];
 
+    // TODO: Add Raw
     loop {
         if let Some(j) = memchr(b'{', i.0) {
             let n = &i[j + 1..];
-
-            i = if 1 < n.len() && n[0] == b'{' && n[1] == b'>' {
-                let i = Input(&i[j + 3..]);
-                match partial(i) {
-                    Ok((i, n)) => {
-                        nodes.push(n);
-                        i
+            macro_rules! _switch {
+                ($n:expr, $t:expr, $ws:expr) => {
+                    match $n {
+                        b'>' => {
+                            let i = Input(&i[j + 3 + $t..]);
+                            match partial(i, $ws) {
+                                Ok((i, n)) => {
+                                    nodes.push(n);
+                                    i
+                                }
+                                Err(nom::Err::Failure(err)) => break Err(nom::Err::Failure(err)),
+                                Err(_) => i,
+                            }
+                        }
+                        b'R' => {
+                            let i = Input(&i[j + 3 + $t..]);
+                            match raw(i, $ws) {
+                                Ok((i, _)) => i,
+                                Err(nom::Err::Failure(err)) => break Err(nom::Err::Failure(err)),
+                                Err(_) => i,
+                            }
+                        }
+                        _ => Input(&n[1 + $t..]),
                     }
-                    Err(nom::Err::Failure(err)) => break Err(nom::Err::Failure(err)),
-                    Err(_) => i,
+                };
+            }
+
+            i = if 2 < n.len() && n[0] == b'{' {
+                if n[1] == b'~' {
+                    _switch!(n[2], 1, true)
+                } else {
+                    _switch!(n[1], 0, false)
                 }
             } else {
                 // next

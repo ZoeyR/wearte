@@ -1,7 +1,7 @@
 [package]
 name = "wearte_helpers"
-version = "0.0.1"
-authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>", "Rust-iendo Barcelona <riendocontributions@gmail.com>", "Daniel Griffen <daniel@griffen.io>"]
+version = "0.0.2"
+authors = ["Dirkjan Ochtman <dirkjan@ochtman.nl>", "Daniel Griffen <daniel@griffen.io>"]
 description = "Helper collection for wearte"
 documentation = "https://docs.rs/wearte_helpers"
 keywords = ["markup", "template", "handlebars", "html", "wearte_helpers"]
